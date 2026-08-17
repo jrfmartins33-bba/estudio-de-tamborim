@@ -4,4 +4,4 @@ import { nitro } from "nitro/vite";
 import viteReact from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import tsconfigPaths from "vite-tsconfig-paths";
-export default defineConfig({plugins:[tanstackStart(),nitro(),viteReact(),tailwindcss(),tsconfigPaths()]});
+export default defineConfig({plugins:[tailwindcss(),tanstackStart(),viteReact(),nitro(),tsconfigPaths()]});
