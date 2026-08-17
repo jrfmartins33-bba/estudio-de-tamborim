@@ -6,7 +6,7 @@ const entradaListagem = z.object({ execucaoId: z.string().min(1).max(120) });
 const entradaCriacao = z.object({ execucaoId: z.string().min(1).max(120), inicioSegundos: z.number().nonnegative().finite(), fimSegundos: z.number().positive().finite() });
 
 export const listarTrechos = createServerFn({ method: "GET" })
-  .inputValidator((data: unknown) => entradaListagem.parse(data))
+  .validator((data: unknown) => entradaListagem.parse(data))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: linhas, error } = await supabaseAdmin.from("trecho_estudo").select("id, nome, ordem, inicio_segundos, fim_segundos, analise_musical").eq("execucao_id", data.execucaoId).order("ordem", { ascending: true });
@@ -15,7 +15,7 @@ export const listarTrechos = createServerFn({ method: "GET" })
   });
 
 export const salvarTrecho = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) => entradaCriacao.parse(data))
+  .validator((data: unknown) => entradaCriacao.parse(data))
   .handler(async ({ data }) => {
     if (data.fimSegundos <= data.inicioSegundos) return { ok: false as const, erro: "O fim do trecho precisa ser maior que o início." };
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

@@ -20,7 +20,7 @@ const esquemaConteudo = z.object({ quadro: z.object({ escola: z.string().max(200
 const entradaLeitura = z.object({ execucaoId: z.string().min(1).max(120) });
 const entradaGravacao = z.object({ execucaoId: z.string().min(1).max(120), conteudo: esquemaConteudo });
 
-export const obterInformacoesDesenho = createServerFn({ method: "GET" }).inputValidator((data: unknown) => entradaLeitura.parse(data)).handler(async ({ data }) => {
+export const obterInformacoesDesenho = createServerFn({ method: "GET" }).validator((data: unknown) => entradaLeitura.parse(data)).handler(async ({ data }) => {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: linha, error } = await supabaseAdmin.from("execucao_informacao").select("conteudo").eq("execucao_id", data.execucaoId).maybeSingle();
   if (error) { console.error("[informacoes] falha ao obter", error); return { informacoes: informacoesPadrao }; }
@@ -28,7 +28,7 @@ export const obterInformacoesDesenho = createServerFn({ method: "GET" }).inputVa
   return { informacoes: analisado.success ? analisado.data : informacoesPadrao };
 });
 
-export const salvarInformacoesDesenho = createServerFn({ method: "POST" }).inputValidator((data: unknown) => entradaGravacao.parse(data)).handler(async ({ data }) => {
+export const salvarInformacoesDesenho = createServerFn({ method: "POST" }).validator((data: unknown) => entradaGravacao.parse(data)).handler(async ({ data }) => {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { error } = await supabaseAdmin.from("execucao_informacao").upsert({ execucao_id: data.execucaoId, conteudo: data.conteudo, updated_at: new Date().toISOString() }, { onConflict: "execucao_id" });
   if (error) { console.error("[informacoes] falha ao salvar", error); return { ok: false as const, erro: "Não foi possível salvar as informações." }; }

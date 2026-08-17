@@ -8,7 +8,7 @@ const entradaExecucao = z.object({ execucaoId: z.string().min(1).max(120) });
 const entradaConfirmacao = z.object({ execucaoId: z.string().min(1).max(120), storagePath: z.string().min(1).max(300) });
 function caminhoDoVideo(execucaoId: string) { const slug = execucaoId.replace(/[^a-zA-Z0-9-_]/g, "-"); return `execucoes/${slug}/referencia.mp4`; }
 
-export const criarUploadAssinado = createServerFn({ method: "POST" }).inputValidator((data: unknown) => entradaUpload.parse(data)).handler(async ({ data }) => {
+export const criarUploadAssinado = createServerFn({ method: "POST" }).validator((data: unknown) => entradaUpload.parse(data)).handler(async ({ data }) => {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const storagePath = caminhoDoVideo(data.execucaoId);
   const { data: assinado, error } = await supabaseAdmin.storage.from(BUCKET).createSignedUploadUrl(storagePath, { upsert: true });
@@ -16,7 +16,7 @@ export const criarUploadAssinado = createServerFn({ method: "POST" }).inputValid
   return { ok: true as const, signedUrl: assinado.signedUrl, storagePath };
 });
 
-export const salvarVideoReferencia = createServerFn({ method: "POST" }).inputValidator((data: unknown) => entradaConfirmacao.parse(data)).handler(async ({ data }) => {
+export const salvarVideoReferencia = createServerFn({ method: "POST" }).validator((data: unknown) => entradaConfirmacao.parse(data)).handler(async ({ data }) => {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const esperado = caminhoDoVideo(data.execucaoId);
   if (data.storagePath !== esperado) return { ok: false as const, erro: "Caminho de arquivo inválido." };
@@ -27,7 +27,7 @@ export const salvarVideoReferencia = createServerFn({ method: "POST" }).inputVal
   return { ok: true as const, videoUrl: url };
 });
 
-export const obterVideoReferencia = createServerFn({ method: "GET" }).inputValidator((data: unknown) => entradaExecucao.parse(data)).handler(async ({ data }) => {
+export const obterVideoReferencia = createServerFn({ method: "GET" }).validator((data: unknown) => entradaExecucao.parse(data)).handler(async ({ data }) => {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: linha } = await supabaseAdmin.from("execucao_video_referencia").select("storage_path").eq("execucao_id", data.execucaoId).maybeSingle();
   if (!linha) return { videoUrl: null as string | null };
