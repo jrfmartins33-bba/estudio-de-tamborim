@@ -1,0 +1,9 @@
+{
+  "source": "Supabase project amhgoymqyfvgeiablejc",
+  "captured_at": "2026-08-17",
+  "trechos": [
+    {"ordem":1,"id":"c1a966ee-1e11-4190-b84f-d779e99f9ef4","nome":"Trecho 01","inicio_segundos":0,"fim_segundos":7.927012,"analise_eventos":32,"analise_md5":"3ded8d0ec81c438eaa9a2c4faf236d15"},
+    {"ordem":2,"id":"672543c0-6711-4f62-ab80-213625b233d0","nome":"Trecho 02","inicio_segundos":7.2,"fim_segundos":19.387687,"analise_eventos":61,"analise_md5":"8cd2928a8048bfba49f1dcdfe4cb19e0"}
+  ],
+  "note": "Os JSON completos de analise_musical permanecem preservados no banco Supabase atual. Os hashes permitem confirmar identidade após qualquer exportação futura."
+}
