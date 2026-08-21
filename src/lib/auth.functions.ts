@@ -6,11 +6,25 @@ const entradaLogin = z.object({
   senha: z.string().min(1).max(200),
 });
 
+const entradaLoginAdministrador = z.object({
+  usuario: z.string().trim().min(1).max(120),
+  senha: z.string().min(1).max(200),
+});
+
 export const entrarRitmista = createServerFn({ method: "POST" })
   .validator((data: unknown) => entradaLogin.parse(data))
   .handler(async ({ data }) => {
     const { entrarComSenha } = await import("@/lib/auth.server");
     return entrarComSenha(data.email, data.senha);
+  });
+
+export const entrarAdministrador = createServerFn({ method: "POST" })
+  .validator((data: unknown) => entradaLoginAdministrador.parse(data))
+  .handler(async ({ data }) => {
+    const { entrarAdministrador: autenticarAdministrador } = await import(
+      "@/lib/auth.server"
+    );
+    return autenticarAdministrador(data.usuario, data.senha);
   });
 
 export const obterSessaoRitmista = createServerFn({ method: "GET" }).handler(

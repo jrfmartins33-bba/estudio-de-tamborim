@@ -15,6 +15,7 @@ import {
   type EscolaCatalogo,
 } from "@/data/escolas-catalogo";
 import {
+  entrarAdministrador,
   entrarRitmista,
   obterSessaoRitmista,
   sairRitmista,
@@ -222,7 +223,8 @@ function HeroAvenida() {
 }
 
 function LoginAla() {
-  const entrar = useServerFn(entrarRitmista);
+  const entrarComoRitmista = useServerFn(entrarRitmista);
+  const entrarComoAdministrador = useServerFn(entrarAdministrador);
   const obterSessao = useServerFn(obterSessaoRitmista);
   const sair = useServerFn(sairRitmista);
   const sessao = useQuery({
@@ -230,7 +232,9 @@ function LoginAla() {
     queryFn: () => obterSessao(),
     staleTime: 60_000,
   });
+  const [modoAcesso, setModoAcesso] = useState<"ritmista" | "admin">("ritmista");
   const [email, setEmail] = useState("");
+  const [usuarioAdmin, setUsuarioAdmin] = useState("");
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -241,7 +245,10 @@ function LoginAla() {
     setErro(null);
     setEnviando(true);
     try {
-      const resultado = await entrar({ data: { email, senha } });
+      const resultado =
+        modoAcesso === "admin"
+          ? await entrarComoAdministrador({ data: { usuario: usuarioAdmin, senha } })
+          : await entrarComoRitmista({ data: { email, senha } });
       if (!resultado.ok) {
         setErro(resultado.erro);
         return;
@@ -276,7 +283,12 @@ function LoginAla() {
               ? "Acesso de administração liberado."
               : "A avenida está aberta para você estudar."}
           </p>
-          <p className="truncate text-xs text-white/48">{usuario.email}</p>
+          <div>
+            <p className="text-lg font-black text-white">{usuario.nomeExibicao}</p>
+            <p className="text-xs font-bold text-white/58">
+              {usuario.papel === "admin" ? "Administrador" : usuario.email}
+            </p>
+          </div>
           <button
             type="button"
             onClick={() => void aoSair()}
@@ -292,16 +304,36 @@ function LoginAla() {
           <p className="mt-2 text-sm leading-6 text-white/64">
             Entre para acessar os desenhos da ala.
           </p>
-          <form className="mt-5 space-y-4" aria-label="Acesso do ritmista" onSubmit={aoEntrar}>
+          <div className="mt-5 grid grid-cols-2 rounded-xl bg-white/8 p-1" role="tablist" aria-label="Tipo de acesso">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={modoAcesso === "ritmista"}
+              onClick={() => { setModoAcesso("ritmista"); setErro(null); }}
+              className={`min-h-11 rounded-lg px-3 text-sm font-black transition-colors ${modoAcesso === "ritmista" ? "bg-[#ffd37a] text-[#14233b]" : "text-white/70 hover:bg-white/10"}`}
+            >
+              Sou Ritmista
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={modoAcesso === "admin"}
+              onClick={() => { setModoAcesso("admin"); setErro(null); }}
+              className={`min-h-11 rounded-lg px-3 text-sm font-black transition-colors ${modoAcesso === "admin" ? "bg-[#ffd37a] text-[#14233b]" : "text-white/70 hover:bg-white/10"}`}
+            >
+              Administração
+            </button>
+          </div>
+          <form className="mt-4 space-y-4" aria-label={modoAcesso === "admin" ? "Acesso administrativo" : "Acesso do ritmista"} onSubmit={aoEntrar}>
             <label className="block">
-              <span className="text-sm font-bold text-white/82">Ritmista</span>
+              <span className="text-sm font-bold text-white/82">{modoAcesso === "admin" ? "Nome de usuário" : "E-mail"}</span>
               <input
-                type="email"
-                name="ritmista"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
+                type={modoAcesso === "admin" ? "text" : "email"}
+                name={modoAcesso === "admin" ? "usuario" : "ritmista"}
+                value={modoAcesso === "admin" ? usuarioAdmin : email}
+                onChange={(event) => modoAcesso === "admin" ? setUsuarioAdmin(event.target.value) : setEmail(event.target.value)}
                 autoComplete="username"
-                placeholder="E-mail de acesso"
+                placeholder={modoAcesso === "admin" ? "Ricardo Martins" : "E-mail de acesso"}
                 required
                 className="mt-2 min-h-12 w-full rounded-xl border border-white/16 bg-white/10 px-4 text-base text-white outline-none placeholder:text-white/38 focus:border-[#ffd37a] focus:ring-2 focus:ring-[#ffd37a]/24"
               />

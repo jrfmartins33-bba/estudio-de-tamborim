@@ -15,6 +15,7 @@ export type UsuarioAutenticado = {
   id: string;
   email: string | null;
   papel: PapelUsuario;
+  nomeExibicao: string;
 };
 
 function obterConfiguracao() {
@@ -56,10 +57,18 @@ function papelDoUsuario(user: User): PapelUsuario {
 }
 
 function usuarioPublico(user: User): UsuarioAutenticado {
+  const papel = papelDoUsuario(user);
+  const nomeAdministrativo = user.app_metadata?.["admin_login"];
   return {
     id: user.id,
-    email: user.email ?? null,
-    papel: papelDoUsuario(user),
+    email: papel === "admin" ? null : user.email ?? null,
+    papel,
+    nomeExibicao:
+      papel === "admin" && typeof nomeAdministrativo === "string" && nomeAdministrativo.trim()
+        ? nomeAdministrativo.trim()
+        : papel === "admin"
+          ? "Administrador"
+          : user.email ?? "Ritmista",
   };
 }
 
@@ -74,6 +83,40 @@ export async function entrarComSenha(email: string, senha: string) {
       ok: false as const,
       erro: "Ritmista ou senha não conferem.",
     };
+  }
+
+  const opcoes = opcoesCookie();
+  setCookie(ACCESS_TOKEN_COOKIE, data.session.access_token, opcoes);
+  setCookie(REFRESH_TOKEN_COOKIE, data.session.refresh_token, opcoes);
+  return { ok: true as const, usuario: usuarioPublico(data.user) };
+}
+
+export async function entrarAdministrador(usuario: string, senha: string) {
+  const loginConfigurado = process.env["ADMIN_LOGIN_NAME"]?.trim();
+  const emailConfigurado = process.env["ADMIN_LOGIN_EMAIL"]?.trim();
+  const loginInformado = usuario.trim();
+
+  if (
+    !loginConfigurado ||
+    !emailConfigurado ||
+    !loginInformado ||
+    loginInformado.toLocaleLowerCase() !== loginConfigurado.toLocaleLowerCase()
+  ) {
+    return { ok: false as const, erro: "Usuário ou senha não conferem." };
+  }
+
+  const cliente = criarCliente();
+  const { data, error } = await cliente.auth.signInWithPassword({
+    email: emailConfigurado,
+    password: senha,
+  });
+  if (
+    error ||
+    !data.session ||
+    !data.user ||
+    data.user.app_metadata?.["role"] !== "admin"
+  ) {
+    return { ok: false as const, erro: "Usuário ou senha não conferem." };
   }
 
   const opcoes = opcoesCookie();
