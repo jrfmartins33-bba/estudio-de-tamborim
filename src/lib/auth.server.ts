@@ -135,24 +135,44 @@ export async function entrarAdministrador(usuario: string, senha: string) {
 
 export async function trocarSenhaPrimeiroAcesso(novaSenha: string) {
   const accessToken = getCookie(ACCESS_TOKEN_COOKIE);
-  if (!accessToken) {
+  const refreshToken = getCookie(REFRESH_TOKEN_COOKIE);
+  if (!accessToken || !refreshToken) {
     return { ok: false as const, erro: "Não foi possível atualizar a senha." };
   }
 
-  const cliente = criarCliente(accessToken);
-  const atual = await cliente.auth.getUser(accessToken);
-  if (atual.error || !atual.data.user || papelDoUsuario(atual.data.user) === "admin") {
+  const cliente = criarCliente();
+  const { data: sessaoData, error: sessaoError } = await cliente.auth.setSession({
+    access_token: accessToken,
+    refresh_token: refreshToken,
+  });
+  if (sessaoError || !sessaoData.session || !sessaoData.user) {
+    console.error(
+      "Falha ao estabelecer sessão para troca de senha.",
+      sessaoError?.message ?? "Sessão ausente.",
+    );
+    return { ok: false as const, erro: "Não foi possível atualizar a senha." };
+  }
+
+  const opcoes = opcoesCookie();
+  setCookie(ACCESS_TOKEN_COOKIE, sessaoData.session.access_token, opcoes);
+  setCookie(REFRESH_TOKEN_COOKIE, sessaoData.session.refresh_token, opcoes);
+
+  if (papelDoUsuario(sessaoData.user) === "admin") {
     return { ok: false as const, erro: "Não foi possível atualizar a senha." };
   }
 
   const { data, error } = await cliente.auth.updateUser({
     password: novaSenha,
     data: {
-      ...(atual.data.user.user_metadata ?? {}),
+      ...(sessaoData.user.user_metadata ?? {}),
       password_changed_by_user_at: new Date().toISOString(),
     },
   });
   if (error || !data.user) {
+    console.error(
+      "Falha ao atualizar senha de primeiro acesso.",
+      error?.message ?? "Usuário ausente.",
+    );
     return { ok: false as const, erro: "Não foi possível atualizar a senha." };
   }
 
