@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { beijaFlor2026 } from "@/data/beija-flor-2026";
 import { obterVideoReferencia } from "@/lib/video-referencia.functions";
 import { listarTrechos, salvarTrecho } from "@/lib/trechos.functions";
+import { obterSessaoRitmista } from "@/lib/auth.functions";
 
 export const Route = createFileRoute("/escolas/beija-flor/2026")({
   head: () => ({
@@ -40,6 +41,13 @@ export const Route = createFileRoute("/escolas/beija-flor/2026")({
 
 function PaginaEstudo() {
   const samba = beijaFlor2026;
+  const buscarSessao = useServerFn(obterSessaoRitmista);
+  const sessaoQuery = useQuery({
+    queryKey: ["sessao-ritmista"],
+    queryFn: () => buscarSessao(),
+    staleTime: 60_000,
+  });
+  const podeEditar = sessaoQuery.data?.usuario?.papel === "admin";
   const [videoUrl, setVideoUrl] = useState<string | null>(
     samba.execucao.videoUrl,
   );
@@ -85,13 +93,13 @@ function PaginaEstudo() {
     }
   };
 
-  const conector = (
-    <ConectarVideoReal
-      execucaoId={samba.execucao.id}
-      onConectado={setVideoUrl}
-      compacto={Boolean(videoUrl)}
-    />
-  );
+  const conector = podeEditar ? (
+      <ConectarVideoReal
+        execucaoId={samba.execucao.id}
+        onConectado={setVideoUrl}
+        compacto={Boolean(videoUrl)}
+      />
+    ) : null;
 
   return (
     <main className="min-h-screen bg-background">
@@ -125,11 +133,12 @@ function PaginaEstudo() {
             <PlayerReferencia
               execucao={execucao}
               conector={conector}
-              aoSalvarTrecho={aoSalvarTrecho}
-              salvandoTrecho={salvando}
+              {...(podeEditar
+                ? { aoSalvarTrecho, salvandoTrecho: salvando }
+                : {})}
               pedidoDeEstudo={pedidoDeEstudo}
             />
-            {videoUrl ? <div className="mt-4 max-w-xs">{conector}</div> : null}
+            {podeEditar && videoUrl ? <div className="mt-4 max-w-xs">{conector}</div> : null}
           </section>
 
           <aside className="space-y-6">
@@ -212,7 +221,7 @@ function PaginaEstudo() {
           </section>
         </div>
 
-        <ConhecaEsteDesenho execucaoId={samba.execucao.id} />
+        <ConhecaEsteDesenho execucaoId={samba.execucao.id} podeEditar={podeEditar} />
       </div>
     </main>
   );

@@ -29,6 +29,8 @@ export const obterInformacoesDesenho = createServerFn({ method: "GET" }).validat
 });
 
 export const salvarInformacoesDesenho = createServerFn({ method: "POST" }).validator((data: unknown) => entradaGravacao.parse(data)).handler(async ({ data }) => {
+  const { exigirAdmin } = await import("@/lib/auth.server");
+  try { await exigirAdmin(); } catch { return { ok: false as const, erro: "Somente o administrador pode alterar as informações." }; }
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { error } = await supabaseAdmin.from("execucao_informacao").upsert({ execucao_id: data.execucaoId, conteudo: data.conteudo, updated_at: new Date().toISOString() }, { onConflict: "execucao_id" });
   if (error) { console.error("[informacoes] falha ao salvar", error); return { ok: false as const, erro: "Não foi possível salvar as informações." }; }

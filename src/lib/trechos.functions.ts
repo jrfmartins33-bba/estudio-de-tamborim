@@ -17,6 +17,8 @@ export const listarTrechos = createServerFn({ method: "GET" })
 export const salvarTrecho = createServerFn({ method: "POST" })
   .validator((data: unknown) => entradaCriacao.parse(data))
   .handler(async ({ data }) => {
+    const { exigirAdmin } = await import("@/lib/auth.server");
+    try { await exigirAdmin(); } catch { return { ok: false as const, erro: "Somente o administrador pode salvar trechos." }; }
     if (data.fimSegundos <= data.inicioSegundos) return { ok: false as const, erro: "O fim do trecho precisa ser maior que o início." };
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: ultimo } = await supabaseAdmin.from("trecho_estudo").select("ordem").eq("execucao_id", data.execucaoId).order("ordem", { ascending: false }).limit(1).maybeSingle();

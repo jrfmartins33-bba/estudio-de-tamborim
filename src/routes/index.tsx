@@ -1,5 +1,7 @@
-import type { CSSProperties, ReactNode } from "react";
+import { useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import {
   CircleDot,
   Flag,
@@ -12,6 +14,11 @@ import {
   escolasCatalogo,
   type EscolaCatalogo,
 } from "@/data/escolas-catalogo";
+import {
+  entrarRitmista,
+  obterSessaoRitmista,
+  sairRitmista,
+} from "@/lib/auth.functions";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -215,46 +222,114 @@ function HeroAvenida() {
 }
 
 function LoginAla() {
+  const entrar = useServerFn(entrarRitmista);
+  const obterSessao = useServerFn(obterSessaoRitmista);
+  const sair = useServerFn(sairRitmista);
+  const sessao = useQuery({
+    queryKey: ["sessao-ritmista"],
+    queryFn: () => obterSessao(),
+    staleTime: 60_000,
+  });
+  const [email, setEmail] = useState("");
+  const [senha, setSenha] = useState("");
+  const [erro, setErro] = useState<string | null>(null);
+  const [enviando, setEnviando] = useState(false);
+  const usuario = sessao.data?.usuario;
+
+  const aoEntrar = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setErro(null);
+    setEnviando(true);
+    try {
+      const resultado = await entrar({ data: { email, senha } });
+      if (!resultado.ok) {
+        setErro(resultado.erro);
+        return;
+      }
+      setSenha("");
+      await sessao.refetch();
+    } catch {
+      setErro("Não foi possível entrar agora. Tente novamente.");
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  const aoSair = async () => {
+    setEnviando(true);
+    try {
+      await sair();
+      await sessao.refetch();
+    } finally {
+      setEnviando(false);
+    }
+  };
+
   return (
     <aside className="login-ala rounded-[1.8rem] border border-white/18 bg-[#081628]/74 p-5 shadow-2xl backdrop-blur-md sm:p-6">
       <p className="home-kicker text-[#ffd37a]">Seu espaço na ala</p>
-      <h2 className="mt-2 text-2xl font-black tracking-[-0.025em]">Entrar</h2>
-      <p className="mt-2 text-sm leading-6 text-white/64">
-        Meu tamborim.
-      </p>
-
-      <form className="mt-5 space-y-4" aria-label="Acesso do ritmista">
-        <label className="block">
-          <span className="text-sm font-bold text-white/82">Ritmista</span>
-          <input
-            type="text"
-            name="ritmista"
-            autoComplete="username"
-            placeholder="Seu nome de acesso"
-            className="mt-2 min-h-12 w-full rounded-xl border border-white/16 bg-white/10 px-4 text-base text-white outline-none placeholder:text-white/38 focus:border-[#ffd37a] focus:ring-2 focus:ring-[#ffd37a]/24"
-          />
-        </label>
-        <label className="block">
-          <span className="text-sm font-bold text-white/82">Senha</span>
-          <input
-            type="password"
-            name="senha"
-            autoComplete="current-password"
-            placeholder="Sua senha"
-            className="mt-2 min-h-12 w-full rounded-xl border border-white/16 bg-white/10 px-4 text-base text-white outline-none placeholder:text-white/38 focus:border-[#ffd37a] focus:ring-2 focus:ring-[#ffd37a]/24"
-          />
-        </label>
-        <button
-          type="button"
-          className="min-h-12 w-full rounded-xl bg-[#ffd37a] px-5 text-sm font-black text-[#14233b] shadow-lg transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-white"
-        >
-          Entrar
-        </button>
-      </form>
-
-      <p className="mt-4 text-xs leading-5 text-white/46">
-        O acesso será conectado à autenticação da ala na próxima etapa.
-      </p>
+      {usuario ? (
+        <div className="mt-3 space-y-4">
+          <h2 className="text-2xl font-black tracking-[-0.025em]">Acesso ativo</h2>
+          <p className="text-sm leading-6 text-white/70">
+            {usuario.papel === "admin"
+              ? "Acesso de administração liberado."
+              : "A avenida está aberta para você estudar."}
+          </p>
+          <p className="truncate text-xs text-white/48">{usuario.email}</p>
+          <button
+            type="button"
+            onClick={() => void aoSair()}
+            disabled={enviando}
+            className="min-h-11 w-full rounded-xl border border-white/20 px-5 text-sm font-black text-white transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-white disabled:opacity-60"
+          >
+            {enviando ? "Saindo…" : "Sair"}
+          </button>
+        </div>
+      ) : (
+        <>
+          <h2 className="mt-2 text-2xl font-black tracking-[-0.025em]">Entrar</h2>
+          <p className="mt-2 text-sm leading-6 text-white/64">
+            Entre para acessar os desenhos da ala.
+          </p>
+          <form className="mt-5 space-y-4" aria-label="Acesso do ritmista" onSubmit={aoEntrar}>
+            <label className="block">
+              <span className="text-sm font-bold text-white/82">Ritmista</span>
+              <input
+                type="email"
+                name="ritmista"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                autoComplete="username"
+                placeholder="E-mail de acesso"
+                required
+                className="mt-2 min-h-12 w-full rounded-xl border border-white/16 bg-white/10 px-4 text-base text-white outline-none placeholder:text-white/38 focus:border-[#ffd37a] focus:ring-2 focus:ring-[#ffd37a]/24"
+              />
+            </label>
+            <label className="block">
+              <span className="text-sm font-bold text-white/82">Senha</span>
+              <input
+                type="password"
+                name="senha"
+                value={senha}
+                onChange={(event) => setSenha(event.target.value)}
+                autoComplete="current-password"
+                placeholder="Sua senha"
+                required
+                className="mt-2 min-h-12 w-full rounded-xl border border-white/16 bg-white/10 px-4 text-base text-white outline-none placeholder:text-white/38 focus:border-[#ffd37a] focus:ring-2 focus:ring-[#ffd37a]/24"
+              />
+            </label>
+            {erro ? <p className="text-sm text-[#ffd1c7]">{erro}</p> : null}
+            <button
+              type="submit"
+              disabled={enviando}
+              className="min-h-12 w-full rounded-xl bg-[#ffd37a] px-5 text-sm font-black text-[#14233b] shadow-lg transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-white disabled:opacity-60"
+            >
+              {enviando ? "Entrando…" : "Entrar"}
+            </button>
+          </form>
+        </>
+      )}
     </aside>
   );
 }

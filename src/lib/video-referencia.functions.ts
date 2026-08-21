@@ -9,6 +9,8 @@ const entradaConfirmacao = z.object({ execucaoId: z.string().min(1).max(120), st
 function caminhoDoVideo(execucaoId: string) { const slug = execucaoId.replace(/[^a-zA-Z0-9-_]/g, "-"); return `execucoes/${slug}/referencia.mp4`; }
 
 export const criarUploadAssinado = createServerFn({ method: "POST" }).validator((data: unknown) => entradaUpload.parse(data)).handler(async ({ data }) => {
+  const { exigirAdmin } = await import("@/lib/auth.server");
+  try { await exigirAdmin(); } catch { return { ok: false as const, erro: "Somente o administrador pode conectar um vídeo." }; }
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const storagePath = caminhoDoVideo(data.execucaoId);
   const { data: assinado, error } = await supabaseAdmin.storage.from(BUCKET).createSignedUploadUrl(storagePath, { upsert: true });
@@ -17,6 +19,8 @@ export const criarUploadAssinado = createServerFn({ method: "POST" }).validator(
 });
 
 export const salvarVideoReferencia = createServerFn({ method: "POST" }).validator((data: unknown) => entradaConfirmacao.parse(data)).handler(async ({ data }) => {
+  const { exigirAdmin } = await import("@/lib/auth.server");
+  try { await exigirAdmin(); } catch { return { ok: false as const, erro: "Somente o administrador pode salvar o vídeo." }; }
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const esperado = caminhoDoVideo(data.execucaoId);
   if (data.storagePath !== esperado) return { ok: false as const, erro: "Caminho de arquivo inválido." };
