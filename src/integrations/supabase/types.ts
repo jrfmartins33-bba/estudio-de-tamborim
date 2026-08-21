@@ -34,6 +34,12 @@ export type Database = {
         Update: { analise_musical?: Json | null; created_at?: string; execucao_id?: string; fim_segundos?: number; id?: string; inicio_segundos?: number; nome?: string; ordem?: number }
         Relationships: []
       }
+      trecho_pessoal: {
+        Row: { created_at: string; execucao_id: string; fim_segundos: number; id: string; inicio_segundos: number; nome: string; user_id: string }
+        Insert: { created_at?: string; execucao_id: string; fim_segundos: number; id?: string; inicio_segundos: number; nome: string; user_id: string }
+        Update: { created_at?: string; execucao_id?: string; fim_segundos?: number; id?: string; inicio_segundos?: number; nome?: string; user_id?: string }
+        Relationships: []
+      }
     }
     Views: { [_ in never]: never }
     Functions: { [_ in never]: never }

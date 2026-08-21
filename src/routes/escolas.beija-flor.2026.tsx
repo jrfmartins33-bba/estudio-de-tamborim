@@ -47,7 +47,9 @@ function PaginaEstudo() {
     queryFn: () => buscarSessao(),
     staleTime: 60_000,
   });
-  const podeEditar = sessaoQuery.data?.usuario?.papel === "admin";
+  const usuario = sessaoQuery.data?.usuario;
+  const podeEditar = usuario?.papel === "admin";
+  const podeSalvarTrecho = Boolean(usuario);
   const [videoUrl, setVideoUrl] = useState<string | null>(
     samba.execucao.videoUrl,
   );
@@ -68,6 +70,7 @@ function PaginaEstudo() {
   const buscarTrechos = useServerFn(listarTrechos);
   const criarTrecho = useServerFn(salvarTrecho);
   const [salvando, setSalvando] = useState(false);
+  const [erroTrecho, setErroTrecho] = useState<string | null>(null);
   const [pedidoDeEstudo, setPedidoDeEstudo] =
     useState<PedidoDeEstudo | null>(null);
   const trechosQuery = useQuery({
@@ -79,14 +82,19 @@ function PaginaEstudo() {
 
   const aoSalvarTrecho = async (inicio: number, fim: number) => {
     setSalvando(true);
+    setErroTrecho(null);
     try {
-      await criarTrecho({
+      const resultado = await criarTrecho({
         data: {
           execucaoId: samba.execucao.id,
           inicioSegundos: inicio,
           fimSegundos: fim,
         },
       });
+      if (!resultado.ok) {
+        setErroTrecho(resultado.erro);
+        return;
+      }
       await trechosQuery.refetch();
     } finally {
       setSalvando(false);
@@ -133,11 +141,16 @@ function PaginaEstudo() {
             <PlayerReferencia
               execucao={execucao}
               conector={conector}
-              {...(podeEditar
+              {...(podeSalvarTrecho
                 ? { aoSalvarTrecho, salvandoTrecho: salvando }
                 : {})}
               pedidoDeEstudo={pedidoDeEstudo}
             />
+            {erroTrecho ? (
+              <p className="mt-3 rounded-xl bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive" role="alert">
+                {erroTrecho}
+              </p>
+            ) : null}
             {podeEditar && videoUrl ? <div className="mt-4 max-w-xs">{conector}</div> : null}
           </section>
 
@@ -182,41 +195,29 @@ function PaginaEstudo() {
             </div>
             {trechos.length === 0 ? (
               <p className="mt-3 text-sm text-muted-foreground">
-                Os trechos serão definidos a partir da análise do vídeo do
-                professor. Marque início (A) e fim (B) no player e use “Salvar
-                trecho”.
+                Os trechos oficiais serão definidos a partir da análise do vídeo.
+                Entre como ritmista para salvar seus próprios trechos de estudo.
               </p>
             ) : (
-              <ul className="mt-4 space-y-2">
-                {trechos.map((trecho) => (
-                  <li
-                    key={trecho.id}
-                    className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-xl bg-muted/60 p-3"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate font-semibold">{trecho.nome}</p>
-                      <p className="text-sm tabular-nums text-muted-foreground">
-                        {formatarTempo(trecho.inicio)} → {formatarTempo(trecho.fim)} ·{" "}
-                        {formatarTempo(trecho.fim - trecho.inicio)}
-                      </p>
-                    </div>
-                    <Button
-                      variant="secondary"
-                      className="h-11 shrink-0 rounded-xl"
-                      onClick={() =>
-                        setPedidoDeEstudo({
-                          inicio: trecho.inicio,
-                          fim: trecho.fim,
-                          token: Date.now(),
-                        })
-                      }
-                    >
-                      <Play className="size-4" aria-hidden="true" />
-                      Estudar
-                    </Button>
-                  </li>
-                ))}
-              </ul>
+              <div className="mt-4 space-y-5">
+                <ListaTrechos
+                  titulo="Trechos oficiais"
+                  trechos={trechos.filter((trecho) => trecho.origem === "oficial")}
+                  aoEstudar={(trecho) =>
+                    setPedidoDeEstudo({ inicio: trecho.inicio, fim: trecho.fim, token: Date.now() })
+                  }
+                />
+                {usuario ? (
+                  <ListaTrechos
+                    titulo="Meus trechos"
+                    trechos={trechos.filter((trecho) => trecho.origem === "pessoal")}
+                    aoEstudar={(trecho) =>
+                      setPedidoDeEstudo({ inicio: trecho.inicio, fim: trecho.fim, token: Date.now() })
+                    }
+                    vazio="Você ainda não salvou um trecho. Marque A e B no player para guardar um recorte só seu."
+                  />
+                ) : null}
+              </div>
             )}
           </section>
         </div>
@@ -224,6 +225,58 @@ function PaginaEstudo() {
         <ConhecaEsteDesenho execucaoId={samba.execucao.id} podeEditar={podeEditar} />
       </div>
     </main>
+  );
+}
+
+type TrechoDaLista = {
+  id: string;
+  nome: string;
+  inicio: number;
+  fim: number;
+};
+
+function ListaTrechos({
+  titulo,
+  trechos,
+  aoEstudar,
+  vazio,
+}: {
+  titulo: string;
+  trechos: TrechoDaLista[];
+  aoEstudar: (trecho: TrechoDaLista) => void;
+  vazio?: string;
+}) {
+  return (
+    <section>
+      <h3 className="text-sm font-bold text-muted-foreground">{titulo}</h3>
+      {trechos.length === 0 ? (
+        <p className="mt-2 text-sm text-muted-foreground">{vazio ?? "Nenhum trecho disponível ainda."}</p>
+      ) : (
+        <ul className="mt-2 space-y-2">
+          {trechos.map((trecho) => (
+            <li
+              key={trecho.id}
+              className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-xl bg-muted/60 p-3"
+            >
+              <div className="min-w-0">
+                <p className="truncate font-semibold">{trecho.nome}</p>
+                <p className="text-sm tabular-nums text-muted-foreground">
+                  {formatarTempo(trecho.inicio)} → {formatarTempo(trecho.fim)} · {formatarTempo(trecho.fim - trecho.inicio)}
+                </p>
+              </div>
+              <Button
+                variant="secondary"
+                className="h-11 shrink-0 rounded-xl"
+                onClick={() => aoEstudar(trecho)}
+              >
+                <Play className="size-4" aria-hidden="true" />
+                Estudar
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 
