@@ -16,7 +16,7 @@ export interface EscolaCatalogo {
  */
 export const escolasCatalogo: EscolaCatalogo[] = [
   { id: "academicos-de-niteroi", nome: "Acadêmicos de Niterói", slug: "academicos-de-niteroi", cores: ["azul", "branco"], status: "em_preparacao" as const, rota: null },
-  { id: "beija-flor", nome: "Beija-Flor", slug: "beija-flor", cores: ["azul", "branco"], status: "disponivel" as const, rota: "/" as const },
+  { id: "beija-flor", nome: "Beija-Flor", slug: "beija-flor", cores: ["azul", "branco"], status: "disponivel" as const, rota: "/escolas/beija-flor/2026" as const },
   { id: "estacio-de-sa", nome: "Estácio de Sá", slug: "estacio-de-sa", cores: ["vermelho", "branco"], status: "em_preparacao" as const, rota: null },
   { id: "grande-rio", nome: "Grande Rio", slug: "grande-rio", cores: ["vermelho", "verde", "branco"], status: "em_preparacao" as const, rota: null },
   { id: "imperio-serrano", nome: "Império Serrano", slug: "imperio-serrano", cores: ["verde", "branco"], status: "em_preparacao" as const, rota: null },

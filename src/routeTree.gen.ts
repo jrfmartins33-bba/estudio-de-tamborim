@@ -11,6 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as EscolasRouteImport } from './routes/escolas'
+import { Route as EscolasIndexRouteImport } from './routes/escolas.index'
+import { Route as EscolasBeijaFlor2026RouteImport } from './routes/escolas.beija-flor.2026'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -22,31 +24,46 @@ const EscolasRoute = EscolasRouteImport.update({
   path: '/escolas',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EscolasIndexRoute = EscolasIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => EscolasRoute,
+} as any)
+const EscolasBeijaFlor2026Route = EscolasBeijaFlor2026RouteImport.update({
+  id: '/beija-flor/2026',
+  path: '/beija-flor/2026',
+  getParentRoute: () => EscolasRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/escolas': typeof EscolasRoute
+  '/escolas': typeof EscolasRouteWithChildren
+  '/escolas/': typeof EscolasIndexRoute
+  '/escolas/beija-flor/2026': typeof EscolasBeijaFlor2026Route
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/escolas': typeof EscolasRoute
+  '/escolas': typeof EscolasIndexRoute
+  '/escolas/beija-flor/2026': typeof EscolasBeijaFlor2026Route
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/escolas': typeof EscolasRoute
+  '/escolas': typeof EscolasRouteWithChildren
+  '/escolas/': typeof EscolasIndexRoute
+  '/escolas/beija-flor/2026': typeof EscolasBeijaFlor2026Route
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/escolas'
+  fullPaths: '/' | '/escolas' | '/escolas/' | '/escolas/beija-flor/2026'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/escolas'
-  id: '__root__' | '/' | '/escolas'
+  to: '/' | '/escolas' | '/escolas/beija-flor/2026'
+  id: '__root__' | '/' | '/escolas' | '/escolas/' | '/escolas/beija-flor/2026'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  EscolasRoute: typeof EscolasRoute
+  EscolasRoute: typeof EscolasRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -65,12 +82,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EscolasRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/escolas/': {
+      id: '/escolas/'
+      path: '/'
+      fullPath: '/escolas/'
+      preLoaderRoute: typeof EscolasIndexRouteImport
+      parentRoute: typeof EscolasRoute
+    }
+    '/escolas/beija-flor/2026': {
+      id: '/escolas/beija-flor/2026'
+      path: '/beija-flor/2026'
+      fullPath: '/escolas/beija-flor/2026'
+      preLoaderRoute: typeof EscolasBeijaFlor2026RouteImport
+      parentRoute: typeof EscolasRoute
+    }
   }
 }
 
+interface EscolasRouteChildren {
+  EscolasIndexRoute: typeof EscolasIndexRoute
+  EscolasBeijaFlor2026Route: typeof EscolasBeijaFlor2026Route
+}
+
+const EscolasRouteChildren: EscolasRouteChildren = {
+  EscolasIndexRoute: EscolasIndexRoute,
+  EscolasBeijaFlor2026Route: EscolasBeijaFlor2026Route,
+}
+
+const EscolasRouteWithChildren =
+  EscolasRoute._addFileChildren(EscolasRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  EscolasRoute: EscolasRoute,
+  EscolasRoute: EscolasRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
