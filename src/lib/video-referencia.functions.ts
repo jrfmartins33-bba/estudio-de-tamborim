@@ -1,5 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import type { Database } from "@/integrations/supabase/types";
 
 const BUCKET = "referencias";
 const TAMANHO_MAXIMO_BYTES = 200 * 1024 * 1024;
@@ -32,13 +34,31 @@ export const salvarVideoReferencia = createServerFn({ method: "POST" }).validato
 });
 
 export const obterVideoReferencia = createServerFn({ method: "GET" }).validator((data: unknown) => entradaExecucao.parse(data)).handler(async ({ data }) => {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data: linha } = await supabaseAdmin.from("execucao_video_referencia").select("storage_path").eq("execucao_id", data.execucaoId).maybeSingle();
-  if (!linha) return { videoUrl: null as string | null };
-  return { videoUrl: await assinarLeitura(supabaseAdmin, linha.storage_path) };
+  try {
+    const { criarSupabaseClientePublico } = await import("@/integrations/supabase/client.server");
+    const supabasePublico = criarSupabaseClientePublico();
+    const { data: linha, error } = await supabasePublico.from("execucao_video_referencia").select("storage_path").eq("execucao_id", data.execucaoId).maybeSingle();
+    if (error) {
+      console.error("[video-referencia] falha ao consultar referência", error);
+      return { videoUrl: null as string | null, erroVideo: true as const };
+    }
+    if (!linha) return { videoUrl: null as string | null, erroVideo: false as const };
+    const { data: assinado, error: erroAssinatura } = await supabasePublico.storage.from(BUCKET).createSignedUrl(linha.storage_path, 60 * 60 * 8);
+    if (erroAssinatura || !assinado?.signedUrl) {
+      console.error("[video-referencia] falha ao gerar URL assinada", erroAssinatura);
+      return { videoUrl: null as string | null, erroVideo: true as const };
+    }
+    return { videoUrl: assinado.signedUrl, erroVideo: false as const };
+  } catch (error) {
+    console.error("[video-referencia] falha inesperada ao carregar referência", error);
+    return { videoUrl: null as string | null, erroVideo: true as const };
+  }
 });
 
-async function assinarLeitura(client: { storage: { from: (b: string) => { createSignedUrl: (p: string, s: number) => Promise<{ data: { signedUrl: string } | null }> } } }, storagePath: string) {
-  const { data } = await client.storage.from(BUCKET).createSignedUrl(storagePath, 60 * 60 * 8);
+async function assinarLeitura(client: SupabaseClient<Database>, storagePath: string) {
+  const { data, error } = await client.storage.from(BUCKET).createSignedUrl(storagePath, 60 * 60 * 8);
+  if (error) {
+    console.error("[video-referencia] falha ao gerar URL assinada após upload", error);
+  }
   return data?.signedUrl ?? null;
 }

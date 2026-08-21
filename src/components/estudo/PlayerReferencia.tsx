@@ -31,6 +31,7 @@ type Props = {
   execucao: ExecucaoDeReferencia;
   /** ação de conexão do vídeo real (renderizada no estado vazio) */
   conector?: ReactNode;
+  erroVideo?: boolean;
   /** persiste o intervalo A–B atual como trecho */
   aoSalvarTrecho?: (inicio: number, fim: number) => Promise<void> | void;
   salvandoTrecho?: boolean;
@@ -43,6 +44,7 @@ type Props = {
 export function PlayerReferencia({
   execucao,
   conector,
+  erroVideo = false,
   aoSalvarTrecho,
   salvandoTrecho = false,
   pedidoDeEstudo = null,
@@ -77,7 +79,7 @@ export function PlayerReferencia({
   const progresso=duracao>0?(tempo/duracao)*100:0;
   return <div className="space-y-5">
     <div className="relative mx-auto w-full overflow-hidden rounded-3xl" style={{background:"var(--gradient-palco)",boxShadow:"var(--shadow-suave)",aspectRatio:execucao.orientacao==="vertical"?"9 / 16":"16 / 9",maxHeight:"70vh",maxWidth:execucao.orientacao==="vertical"?"26rem":"100%"}}>
-      {temVideo?<video ref={videoRef} src={execucao.videoUrl??undefined} playsInline className="h-full w-full object-contain" onLoadedMetadata={(e)=>{const v=e.currentTarget;v.preservesPitch=true;v.playbackRate=velocidade;if(Number.isFinite(v.duration))setDuracao(v.duration);}} onTimeUpdate={aoAtualizarTempo} onPlay={()=>{setTocando(true);iniciarFrames();}} onPause={()=>{setTocando(false);pararFrames();sincronizarTempo();}} onEnded={()=>{setTocando(false);pararFrames();}} onClick={alternarPlay}/>:<div className="flex h-full w-full flex-col items-center justify-center gap-3 px-6 text-center"><span className="grid size-14 place-items-center rounded-2xl bg-primary-foreground/10"><Video className="size-7 text-primary-foreground"/></span><p className="text-base font-semibold text-primary-foreground">Vídeo de referência pronto para ser conectado</p><p className="max-w-xs text-sm text-primary-foreground/70">Assim que o arquivo do professor for conectado, ele aparece aqui com todos os controles de estudo já ativos.</p>{conector?<div className="mt-2 w-full max-w-xs">{conector}</div>:null}</div>}
+      {temVideo?<video ref={videoRef} src={execucao.videoUrl??undefined} playsInline className="h-full w-full object-contain" onLoadedMetadata={(e)=>{const v=e.currentTarget;v.preservesPitch=true;v.playbackRate=velocidade;if(Number.isFinite(v.duration))setDuracao(v.duration);}} onTimeUpdate={aoAtualizarTempo} onPlay={()=>{setTocando(true);iniciarFrames();}} onPause={()=>{setTocando(false);pararFrames();sincronizarTempo();}} onEnded={()=>{setTocando(false);pararFrames();}} onClick={alternarPlay}/>:<div className="flex h-full w-full flex-col items-center justify-center gap-3 px-6 text-center"><span className="grid size-14 place-items-center rounded-2xl bg-primary-foreground/10"><Video className="size-7 text-primary-foreground"/></span><p className="text-base font-semibold text-primary-foreground">{erroVideo ? "Não foi possível carregar o vídeo agora. Tente novamente." : "Vídeo de referência pronto para ser conectado"}</p>{erroVideo ? null : <p className="max-w-xs text-sm text-primary-foreground/70">Assim que o arquivo do professor for conectado, ele aparece aqui com todos os controles de estudo já ativos.</p>}{conector?<div className="mt-2 w-full max-w-xs">{conector}</div>:null}</div>}
     </div>
     <div className="space-y-2"><Slider value={[Math.min(tempo,duracao)]} min={0} max={duracao||1} step={0.1} disabled={!temVideo} onValueChange={(valores)=>irPara(valores[0]??0)} aria-label="Barra de progresso"/><div className="relative h-4">{podeLoop&&duracao>0&&<div className="absolute -top-6 h-2 rounded-full bg-accent/70" style={{left:`${(pontoA!/duracao)*100}%`,width:`${((pontoB!-pontoA!)/duracao)*100}%`}} aria-hidden/>}<div className="flex justify-between text-sm tabular-nums text-muted-foreground"><span>{formatarTempo(tempo)}</span><span>{formatarTempo(duracao)}</span></div></div><span className="sr-only">{Math.round(progresso)}% reproduzido</span></div>
     <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3"><Button variant="secondary" size="lg" className="h-14 rounded-2xl text-base" disabled={!temVideo} onClick={()=>pular(-5)}><RotateCcw className="size-5"/>5s</Button><Button size="lg" className="size-16 rounded-full" disabled={!temVideo} onClick={alternarPlay} aria-label={tocando?"Pausar":"Reproduzir"}>{tocando?<Pause className="size-7"/>:<Play className="size-7"/>}</Button><Button variant="secondary" size="lg" className="h-14 rounded-2xl text-base" disabled={!temVideo} onClick={()=>pular(5)}>5s<RotateCw className="size-5"/></Button></div>

@@ -16,6 +16,10 @@ const entradaLoginUnificado = z.object({
   senha: z.string().min(1).max(200),
 });
 
+const entradaTrocaSenha = z.object({
+  novaSenha: z.string().min(8).max(200),
+});
+
 export const entrarRitmista = createServerFn({ method: "POST" })
   .validator((data: unknown) => entradaLogin.parse(data))
   .handler(async ({ data }) => {
@@ -44,6 +48,15 @@ export const entrarUsuario = createServerFn({ method: "POST" })
       "@/lib/auth.server"
     );
     return autenticarAdministrador(data.identificador, data.senha);
+  });
+
+export const trocarSenhaPrimeiroAcesso = createServerFn({ method: "POST" })
+  .validator((data: unknown) => entradaTrocaSenha.parse(data))
+  .handler(async ({ data }) => {
+    const { trocarSenhaPrimeiroAcesso: atualizarSenha } = await import(
+      "@/lib/auth.server"
+    );
+    return atualizarSenha(data.novaSenha);
   });
 
 export const obterSessaoRitmista = createServerFn({ method: "GET" }).handler(

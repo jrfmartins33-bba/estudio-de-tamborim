@@ -250,6 +250,7 @@ function LoginAla() {
         return;
       }
       setSenha("");
+      await sessao.refetch();
       await navigate({ to: "/escolas/beija-flor/2026" });
     } catch {
       setErro("Não foi possível entrar agora. Tente novamente.");

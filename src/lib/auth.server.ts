@@ -16,6 +16,7 @@ export type UsuarioAutenticado = {
   email: string | null;
   papel: PapelUsuario;
   nomeExibicao: string;
+  deveTrocarSenha: boolean;
 };
 
 function obterConfiguracao() {
@@ -63,6 +64,8 @@ function usuarioPublico(user: User): UsuarioAutenticado {
     id: user.id,
     email: papel === "admin" ? null : user.email ?? null,
     papel,
+    deveTrocarSenha:
+      papel === "ritmista" && !user.user_metadata?.["password_changed_by_user_at"],
     nomeExibicao:
       papel === "admin" && typeof nomeAdministrativo === "string" && nomeAdministrativo.trim()
         ? nomeAdministrativo.trim()
@@ -127,6 +130,32 @@ export async function entrarAdministrador(usuario: string, senha: string) {
   const opcoes = opcoesCookie();
   setCookie(ACCESS_TOKEN_COOKIE, data.session.access_token, opcoes);
   setCookie(REFRESH_TOKEN_COOKIE, data.session.refresh_token, opcoes);
+  return { ok: true as const, usuario: usuarioPublico(data.user) };
+}
+
+export async function trocarSenhaPrimeiroAcesso(novaSenha: string) {
+  const accessToken = getCookie(ACCESS_TOKEN_COOKIE);
+  if (!accessToken) {
+    return { ok: false as const, erro: "Não foi possível atualizar a senha." };
+  }
+
+  const cliente = criarCliente(accessToken);
+  const atual = await cliente.auth.getUser(accessToken);
+  if (atual.error || !atual.data.user || papelDoUsuario(atual.data.user) === "admin") {
+    return { ok: false as const, erro: "Não foi possível atualizar a senha." };
+  }
+
+  const { data, error } = await cliente.auth.updateUser({
+    password: novaSenha,
+    data: {
+      ...(atual.data.user.user_metadata ?? {}),
+      password_changed_by_user_at: new Date().toISOString(),
+    },
+  });
+  if (error || !data.user) {
+    return { ok: false as const, erro: "Não foi possível atualizar a senha." };
+  }
+
   return { ok: true as const, usuario: usuarioPublico(data.user) };
 }
 
