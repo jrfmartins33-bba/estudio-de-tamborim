@@ -78,7 +78,12 @@ export async function entrarComSenha(email: string, senha: string) {
     email,
     password: senha,
   });
-  if (error || !data.session || !data.user) {
+  if (
+    error ||
+    !data.session ||
+    !data.user ||
+    data.user.app_metadata?.["role"] === "admin"
+  ) {
     return {
       ok: false as const,
       erro: "Ritmista ou senha não conferem.",
