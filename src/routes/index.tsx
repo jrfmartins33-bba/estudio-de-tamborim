@@ -1,6 +1,6 @@
 import { useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
   CircleDot,
@@ -15,8 +15,7 @@ import {
   type EscolaCatalogo,
 } from "@/data/escolas-catalogo";
 import {
-  entrarAdministrador,
-  entrarRitmista,
+  entrarUsuario,
   obterSessaoRitmista,
   sairRitmista,
 } from "@/lib/auth.functions";
@@ -223,8 +222,8 @@ function HeroAvenida() {
 }
 
 function LoginAla() {
-  const entrarComoRitmista = useServerFn(entrarRitmista);
-  const entrarComoAdministrador = useServerFn(entrarAdministrador);
+  const entrar = useServerFn(entrarUsuario);
+  const navigate = useNavigate();
   const obterSessao = useServerFn(obterSessaoRitmista);
   const sair = useServerFn(sairRitmista);
   const sessao = useQuery({
@@ -232,9 +231,7 @@ function LoginAla() {
     queryFn: () => obterSessao(),
     staleTime: 60_000,
   });
-  const [modoAcesso, setModoAcesso] = useState<"ritmista" | "admin">("ritmista");
-  const [email, setEmail] = useState("");
-  const [usuarioAdmin, setUsuarioAdmin] = useState("");
+  const [identificador, setIdentificador] = useState("");
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -245,16 +242,15 @@ function LoginAla() {
     setErro(null);
     setEnviando(true);
     try {
-      const resultado =
-        modoAcesso === "admin"
-          ? await entrarComoAdministrador({ data: { usuario: usuarioAdmin, senha } })
-          : await entrarComoRitmista({ data: { email, senha } });
+      const resultado = await entrar({
+        data: { identificador, senha },
+      });
       if (!resultado.ok) {
         setErro(resultado.erro);
         return;
       }
       setSenha("");
-      await sessao.refetch();
+      await navigate({ to: "/escolas/beija-flor/2026" });
     } catch {
       setErro("Não foi possível entrar agora. Tente novamente.");
     } finally {
@@ -304,36 +300,16 @@ function LoginAla() {
           <p className="mt-2 text-sm leading-6 text-white/64">
             Entre para acessar os desenhos da ala.
           </p>
-          <div className="mt-5 grid grid-cols-2 rounded-xl bg-white/8 p-1" role="tablist" aria-label="Tipo de acesso">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={modoAcesso === "ritmista"}
-              onClick={() => { setModoAcesso("ritmista"); setErro(null); }}
-              className={`min-h-11 rounded-lg px-3 text-sm font-black transition-colors ${modoAcesso === "ritmista" ? "bg-[#ffd37a] text-[#14233b]" : "text-white/70 hover:bg-white/10"}`}
-            >
-              Sou Ritmista
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={modoAcesso === "admin"}
-              onClick={() => { setModoAcesso("admin"); setErro(null); }}
-              className={`min-h-11 rounded-lg px-3 text-sm font-black transition-colors ${modoAcesso === "admin" ? "bg-[#ffd37a] text-[#14233b]" : "text-white/70 hover:bg-white/10"}`}
-            >
-              Administração
-            </button>
-          </div>
-          <form className="mt-4 space-y-4" aria-label={modoAcesso === "admin" ? "Acesso administrativo" : "Acesso do ritmista"} onSubmit={aoEntrar}>
+          <form className="mt-4 space-y-4" aria-label="Acesso" onSubmit={aoEntrar}>
             <label className="block">
-              <span className="text-sm font-bold text-white/82">{modoAcesso === "admin" ? "Nome de usuário" : "E-mail"}</span>
+              <span className="text-sm font-bold text-white/82">Usuário</span>
               <input
-                type={modoAcesso === "admin" ? "text" : "email"}
-                name={modoAcesso === "admin" ? "usuario" : "ritmista"}
-                value={modoAcesso === "admin" ? usuarioAdmin : email}
-                onChange={(event) => modoAcesso === "admin" ? setUsuarioAdmin(event.target.value) : setEmail(event.target.value)}
+                type="text"
+                name="usuario"
+                value={identificador}
+                onChange={(event) => setIdentificador(event.target.value)}
                 autoComplete="username"
-                placeholder={modoAcesso === "admin" ? "Ricardo Martins" : "E-mail de acesso"}
+                placeholder="Seu usuário"
                 required
                 className="mt-2 min-h-12 w-full rounded-xl border border-white/16 bg-white/10 px-4 text-base text-white outline-none placeholder:text-white/38 focus:border-[#ffd37a] focus:ring-2 focus:ring-[#ffd37a]/24"
               />
