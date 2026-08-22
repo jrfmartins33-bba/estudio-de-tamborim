@@ -189,7 +189,7 @@ function PaginaInicial() {
 
 function HeroAvenida() {
   return (
-    <section className="hero-avenida hero-foto-ala relative min-h-[46rem] overflow-hidden px-4 text-white sm:px-6 lg:px-8">
+    <section className="hero-avenida hero-foto-ala relative min-h-[100svh] overflow-hidden px-4 text-white sm:px-6 lg:px-8">
       <div className="hero-palco-luzes" aria-hidden="true">
         <svg
           className="hero-palco-luzes-svg"
@@ -270,7 +270,7 @@ function HeroAvenida() {
           </g>
         </svg>
       </div>
-      <div className="relative z-10 mx-auto flex min-h-[46rem] max-w-7xl flex-col">
+      <div className="relative z-10 mx-auto flex min-h-[100svh] w-full flex-col">
         <header className="flex items-center justify-end gap-4 py-5 sm:py-7">
           <ControleBateriaHero />
         </header>

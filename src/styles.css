@@ -233,17 +233,31 @@ html { scroll-behavior: smooth; }
   isolation: isolate;
 }
 
-@media (min-width: 1440px) {
+@media (min-width: 1440px) and (max-width: 1599.98px) {
   .hero-bateria-botao {
-    min-height: 2.75rem;
-    padding: .56rem .94rem;
-    font-size: .68rem;
+    min-height: 2.25rem;
+    padding: .42rem .66rem;
+    font-size: .56rem;
+    translate: -4.75rem -8px;
+  }
+
+  .hero-bateria-play {
+    width: 1.18rem;
+    height: 1.18rem;
+  }
+}
+
+@media (min-width: 1600px) {
+  .hero-bateria-botao {
+    min-height: 3rem;
+    padding: .62rem 1.08rem;
+    font-size: .72rem;
     translate: 0 -8px;
   }
 
   .hero-bateria-play {
-    width: 1.45rem;
-    height: 1.45rem;
+    width: 1.58rem;
+    height: 1.58rem;
   }
 }
 
