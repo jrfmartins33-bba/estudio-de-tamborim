@@ -1,9 +1,15 @@
-import { useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
-  CircleDot,
   Flag,
   Heart,
   Sparkles,
@@ -184,23 +190,89 @@ function PaginaInicial() {
 function HeroAvenida() {
   return (
     <section className="hero-avenida hero-foto-ala relative min-h-[46rem] overflow-hidden px-4 text-white sm:px-6 lg:px-8">
+      <div className="hero-palco-luzes" aria-hidden="true">
+        <svg
+          className="hero-palco-luzes-svg"
+          viewBox="0 0 1200 736"
+          preserveAspectRatio="none"
+          focusable="false"
+        >
+          <defs>
+            <linearGradient id="hero-feixe-dourado" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor="#fff8dc" stopOpacity="0.04" />
+              <stop offset="0.34" stopColor="#ffd77b" stopOpacity="0.72" />
+              <stop offset="0.76" stopColor="#ffe8a9" stopOpacity="0.38" />
+              <stop offset="1" stopColor="#fff3c9" stopOpacity="0" />
+            </linearGradient>
+            <linearGradient id="hero-feixe-branco" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor="#ffffff" stopOpacity="0.06" />
+              <stop offset="0.38" stopColor="#fff3c7" stopOpacity="0.58" />
+              <stop offset="0.78" stopColor="#ffe6a0" stopOpacity="0.27" />
+              <stop offset="1" stopColor="#fff6d8" stopOpacity="0" />
+            </linearGradient>
+            <linearGradient id="hero-feixe-nucleo" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor="#ffffff" stopOpacity="0.18" />
+              <stop offset="0.32" stopColor="#fffbe9" stopOpacity="0.88" />
+              <stop offset="0.7" stopColor="#ffe7a1" stopOpacity="0.48" />
+              <stop offset="1" stopColor="#fff4c9" stopOpacity="0" />
+            </linearGradient>
+            <radialGradient id="hero-fonte-glow">
+              <stop offset="0" stopColor="#fffce9" stopOpacity="0.96" />
+              <stop offset="0.18" stopColor="#ffe3a0" stopOpacity="0.72" />
+              <stop offset="1" stopColor="#ffd36f" stopOpacity="0" />
+            </radialGradient>
+            <radialGradient id="hero-haze-glow">
+              <stop offset="0" stopColor="#ffe5a1" stopOpacity="0.24" />
+              <stop offset="0.55" stopColor="#ffd984" stopOpacity="0.09" />
+              <stop offset="1" stopColor="#ffd984" stopOpacity="0" />
+            </radialGradient>
+            <filter id="hero-feixe-blur" x="-24%" y="-8%" width="148%" height="124%">
+              <feGaussianBlur stdDeviation="22" />
+            </filter>
+            <filter id="hero-feixe-nucleo-blur" x="-24%" y="-8%" width="148%" height="124%">
+              <feGaussianBlur stdDeviation="5" />
+            </filter>
+            <filter id="hero-feixe-haze" x="-24%" y="-24%" width="148%" height="148%">
+              <feGaussianBlur stdDeviation="34" />
+            </filter>
+            <filter id="hero-fonte-blur" x="-250%" y="-250%" width="500%" height="500%">
+              <feGaussianBlur stdDeviation="7" />
+            </filter>
+          </defs>
+
+          <g className="hero-luzes-haze" filter="url(#hero-feixe-haze)">
+            <ellipse cx="600" cy="360" rx="520" ry="245" fill="url(#hero-haze-glow)" />
+            <ellipse cx="600" cy="530" rx="420" ry="180" fill="url(#hero-haze-glow)" opacity="0.72" />
+          </g>
+
+          <g className="hero-fontes">
+            <circle className="hero-fonte hero-fonte-1" cx="86" cy="20" r="42" fill="url(#hero-fonte-glow)" filter="url(#hero-fonte-blur)" />
+            <circle className="hero-fonte hero-fonte-2" cx="390" cy="10" r="38" fill="url(#hero-fonte-glow)" filter="url(#hero-fonte-blur)" />
+            <circle className="hero-fonte hero-fonte-3" cx="810" cy="10" r="38" fill="url(#hero-fonte-glow)" filter="url(#hero-fonte-blur)" />
+            <circle className="hero-fonte hero-fonte-4" cx="1114" cy="20" r="42" fill="url(#hero-fonte-glow)" filter="url(#hero-fonte-blur)" />
+          </g>
+
+          <g className="hero-feixe hero-feixe-1">
+            <path d="M82 0 C112 156 240 410 470 736 C392 724 318 720 220 736 C142 476 72 178 82 0Z" fill="url(#hero-feixe-dourado)" filter="url(#hero-feixe-blur)" />
+            <path d="M92 0 C140 176 270 432 410 736 C364 724 326 722 286 736 C182 456 100 170 92 0Z" fill="url(#hero-feixe-nucleo)" filter="url(#hero-feixe-nucleo-blur)" />
+          </g>
+          <g className="hero-feixe hero-feixe-2">
+            <path d="M386 0 C414 182 520 414 690 736 C614 722 554 718 474 736 C430 486 352 196 386 0Z" fill="url(#hero-feixe-branco)" filter="url(#hero-feixe-blur)" />
+            <path d="M398 0 C438 184 540 432 634 736 C594 724 562 722 530 736 C482 474 382 192 398 0Z" fill="url(#hero-feixe-nucleo)" filter="url(#hero-feixe-nucleo-blur)" />
+          </g>
+          <g className="hero-feixe hero-feixe-3">
+            <path d="M814 0 C786 184 686 430 510 736 C588 720 652 718 728 736 C782 478 850 186 814 0Z" fill="url(#hero-feixe-branco)" filter="url(#hero-feixe-blur)" />
+            <path d="M802 0 C764 184 660 432 566 736 C606 724 638 722 670 736 C718 474 818 192 802 0Z" fill="url(#hero-feixe-nucleo)" filter="url(#hero-feixe-nucleo-blur)" />
+          </g>
+          <g className="hero-feixe hero-feixe-4">
+            <path d="M1118 0 C1086 160 968 408 730 736 C818 722 892 718 990 736 C1052 478 1128 178 1118 0Z" fill="url(#hero-feixe-dourado)" filter="url(#hero-feixe-blur)" />
+            <path d="M1108 0 C1060 176 930 432 790 736 C836 724 874 722 914 736 C1018 456 1100 170 1108 0Z" fill="url(#hero-feixe-nucleo)" filter="url(#hero-feixe-nucleo-blur)" />
+          </g>
+        </svg>
+      </div>
       <div className="relative z-10 mx-auto flex min-h-[46rem] max-w-7xl flex-col">
         <header className="flex items-center justify-between gap-4 py-5 sm:py-7">
-          <Link
-            to="/"
-            aria-label="Estúdio de Tamborim — início"
-            className="inline-flex items-center gap-3 rounded-full focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#ffd37a]"
-          >
-            <span className="grid size-11 place-items-center rounded-full border border-white/20 bg-white/10 backdrop-blur-sm">
-              <CircleDot className="size-6 text-[#ffd37a]" aria-hidden="true" />
-            </span>
-            <span>
-              <span className="block text-xs font-black tracking-[0.16em] text-white/60 uppercase">
-                Estúdio de
-              </span>
-              <span className="block text-lg leading-none font-black">Tamborim</span>
-            </span>
-          </Link>
+          <ControleBateriaHero />
 
           <p className="hidden text-right text-xs font-black tracking-[0.15em] text-white/64 uppercase sm:block">
             Tamborim Arretado
@@ -218,6 +290,137 @@ function HeroAvenida() {
         </div>
       </div>
     </section>
+  );
+}
+
+type EstadoBateria = "aguardando" | "tocando";
+
+function ControleBateriaHero() {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const autoplayTentadoRef = useRef(false);
+  const playEmAndamentoRef = useRef(false);
+  const [estado, setEstado] = useState<EstadoBateria>("aguardando");
+
+  const tocar = (audio: HTMLAudioElement, origem: "autoplay" | "interacao") => {
+    if (playEmAndamentoRef.current) return;
+
+    playEmAndamentoRef.current = true;
+    void audio
+      .play()
+      .then(() => {
+        console.info(`[Hero bateria] ${origem} play() result: success`);
+        setEstado("tocando");
+      })
+      .catch((error: unknown) => {
+        const nome = error instanceof Error ? error.name : "UnknownError";
+        const mensagem = error instanceof Error ? error.message : String(error);
+
+        if (origem === "autoplay") {
+          console.info(`[Hero bateria] autoplay play() result: rejected: ${nome}: ${mensagem}`);
+        } else {
+          console.error("Não foi possível iniciar o áudio da bateria.");
+        }
+
+        setEstado("aguardando");
+      })
+      .finally(() => {
+        playEmAndamentoRef.current = false;
+      });
+  };
+
+  useEffect(() => {
+    const audio = new Audio();
+    audio.src = "/audio/hero-batucada-dudu-nobre-27s.m4a";
+    audio.preload = "auto";
+    audio.loop = false;
+    audio.muted = false;
+    audio.volume = 1;
+    audioRef.current = audio;
+
+    const aoTerminar = () => {
+      audio.currentTime = 0;
+      setEstado("aguardando");
+    };
+    const aoFalhar = () => {
+      console.error("Não foi possível carregar o áudio da bateria.");
+      setEstado("aguardando");
+    };
+    const tentarAutoplay = () => {
+      if (autoplayTentadoRef.current) return;
+
+      autoplayTentadoRef.current = true;
+      tocar(audio, "autoplay");
+    };
+
+    audio.addEventListener("ended", aoTerminar);
+    audio.addEventListener("error", aoFalhar);
+    audio.addEventListener("canplay", tentarAutoplay, { once: true });
+
+    if (audio.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
+      tentarAutoplay();
+    } else {
+      audio.load();
+    }
+
+    return () => {
+      audio.pause();
+      audio.removeEventListener("ended", aoTerminar);
+      audio.removeEventListener("error", aoFalhar);
+      audio.removeEventListener("canplay", tentarAutoplay);
+      if (audioRef.current === audio) {
+        audioRef.current = null;
+      }
+    };
+  }, []);
+
+  const iniciar = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    audio.currentTime = 0;
+    tocar(audio, "interacao");
+  };
+
+  const parar = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    audio.pause();
+    audio.currentTime = 0;
+    setEstado("aguardando");
+  };
+
+  if (estado === "tocando") {
+    return (
+      <button
+        type="button"
+        className="hero-bateria-botao hero-bateria-tocando"
+        aria-label="Parar bateria"
+        onClick={parar}
+      >
+        <span className="hero-bateria-equalizador" aria-hidden="true">
+          <i />
+          <i />
+          <i />
+          <i />
+        </span>
+        <span className="hero-bateria-texto">BATERIA AO VIVO</span>
+        <span className="hero-bateria-separador" aria-hidden="true">·</span>
+        <span className="hero-bateria-acao">PARAR</span>
+      </button>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      className="hero-bateria-botao hero-bateria-parado"
+      aria-label="Entrar com a bateria"
+      onClick={iniciar}
+    >
+      <span className="hero-bateria-play" aria-hidden="true">▶</span>
+      <span>ENTRAR COM A BATERIA</span>
+    </button>
   );
 }
 
