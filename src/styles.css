@@ -233,6 +233,20 @@ html { scroll-behavior: smooth; }
   isolation: isolate;
 }
 
+@media (min-width: 1440px) {
+  .hero-bateria-botao {
+    min-height: 2.75rem;
+    padding: .56rem .94rem;
+    font-size: .68rem;
+    translate: 0 -8px;
+  }
+
+  .hero-bateria-play {
+    width: 1.45rem;
+    height: 1.45rem;
+  }
+}
+
 .hero-frase-rodape::before {
   position: absolute;
   right: -1rem;
