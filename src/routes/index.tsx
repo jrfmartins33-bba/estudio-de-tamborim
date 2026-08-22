@@ -271,13 +271,8 @@ function HeroAvenida() {
         </svg>
       </div>
       <div className="relative z-10 mx-auto flex min-h-[46rem] max-w-7xl flex-col">
-        <header className="flex items-center justify-between gap-4 py-5 sm:py-7">
+        <header className="flex items-center justify-end gap-4 py-5 sm:py-7">
           <ControleBateriaHero />
-
-          <p className="hidden text-right text-xs font-black tracking-[0.15em] text-white/64 uppercase sm:block">
-            Tamborim Arretado
-            <span className="block text-[#ffd37a]">Fortaleza</span>
-          </p>
         </header>
 
         <div id="topo" className="flex-1" />

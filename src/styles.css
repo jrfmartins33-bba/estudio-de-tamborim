@@ -148,7 +148,7 @@ html { scroll-behavior: smooth; }
   gap: .5rem;
   border: 1px solid rgb(255 211 122 / 72%);
   border-radius: 999px;
-  margin-left: 96px;
+  margin-left: 0;
   padding: .48rem .76rem;
   color: #fff;
   font-size: .6rem;
@@ -723,7 +723,7 @@ html { scroll-behavior: smooth; }
   .hero-bateria-botao {
     min-height: 2.55rem;
     max-width: 100%;
-    margin-left: 1rem;
+    margin-left: 0;
     padding-inline: .66rem;
     font-size: .57rem;
     letter-spacing: .1em;
