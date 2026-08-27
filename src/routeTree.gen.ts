@@ -10,8 +10,12 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AvenidaRouteImport } from './routes/avenida'
 import { Route as EscolasRouteImport } from './routes/escolas'
+import { Route as RedefinirSenhaRouteImport } from './routes/redefinir-senha'
+import { Route as AuthConfirmRouteImport } from './routes/auth.confirm'
 import { Route as EscolasIndexRouteImport } from './routes/escolas.index'
+import { Route as EscolasSlugRouteImport } from './routes/escolas.$slug'
 import { Route as EscolasBeijaFlor2026RouteImport } from './routes/escolas.beija-flor.2026'
 
 const IndexRoute = IndexRouteImport.update({
@@ -19,14 +23,34 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AvenidaRoute = AvenidaRouteImport.update({
+  id: '/avenida',
+  path: '/avenida',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EscolasRoute = EscolasRouteImport.update({
   id: '/escolas',
   path: '/escolas',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RedefinirSenhaRoute = RedefinirSenhaRouteImport.update({
+  id: '/redefinir-senha',
+  path: '/redefinir-senha',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthConfirmRoute = AuthConfirmRouteImport.update({
+  id: '/auth/confirm',
+  path: '/auth/confirm',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EscolasIndexRoute = EscolasIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => EscolasRoute,
+} as any)
+const EscolasSlugRoute = EscolasSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
   getParentRoute: () => EscolasRoute,
 } as any)
 const EscolasBeijaFlor2026Route = EscolasBeijaFlor2026RouteImport.update({
@@ -37,33 +61,72 @@ const EscolasBeijaFlor2026Route = EscolasBeijaFlor2026RouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/avenida': typeof AvenidaRoute
   '/escolas': typeof EscolasRouteWithChildren
+  '/redefinir-senha': typeof RedefinirSenhaRoute
+  '/auth/confirm': typeof AuthConfirmRoute
+  '/escolas/$slug': typeof EscolasSlugRoute
   '/escolas/': typeof EscolasIndexRoute
   '/escolas/beija-flor/2026': typeof EscolasBeijaFlor2026Route
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/avenida': typeof AvenidaRoute
+  '/redefinir-senha': typeof RedefinirSenhaRoute
+  '/auth/confirm': typeof AuthConfirmRoute
+  '/escolas/$slug': typeof EscolasSlugRoute
   '/escolas': typeof EscolasIndexRoute
   '/escolas/beija-flor/2026': typeof EscolasBeijaFlor2026Route
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/avenida': typeof AvenidaRoute
   '/escolas': typeof EscolasRouteWithChildren
+  '/redefinir-senha': typeof RedefinirSenhaRoute
+  '/auth/confirm': typeof AuthConfirmRoute
+  '/escolas/$slug': typeof EscolasSlugRoute
   '/escolas/': typeof EscolasIndexRoute
   '/escolas/beija-flor/2026': typeof EscolasBeijaFlor2026Route
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/escolas' | '/escolas/' | '/escolas/beija-flor/2026'
+  fullPaths:
+    | '/'
+    | '/avenida'
+    | '/escolas'
+    | '/redefinir-senha'
+    | '/auth/confirm'
+    | '/escolas/$slug'
+    | '/escolas/'
+    | '/escolas/beija-flor/2026'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/escolas' | '/escolas/beija-flor/2026'
-  id: '__root__' | '/' | '/escolas' | '/escolas/' | '/escolas/beija-flor/2026'
+  to:
+    | '/'
+    | '/avenida'
+    | '/redefinir-senha'
+    | '/auth/confirm'
+    | '/escolas/$slug'
+    | '/escolas'
+    | '/escolas/beija-flor/2026'
+  id:
+    | '__root__'
+    | '/'
+    | '/avenida'
+    | '/escolas'
+    | '/redefinir-senha'
+    | '/auth/confirm'
+    | '/escolas/$slug'
+    | '/escolas/'
+    | '/escolas/beija-flor/2026'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AvenidaRoute: typeof AvenidaRoute
   EscolasRoute: typeof EscolasRouteWithChildren
+  RedefinirSenhaRoute: typeof RedefinirSenhaRoute
+  AuthConfirmRoute: typeof AuthConfirmRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -75,6 +138,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/avenida': {
+      id: '/avenida'
+      path: '/avenida'
+      fullPath: '/avenida'
+      preLoaderRoute: typeof AvenidaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/escolas': {
       id: '/escolas'
       path: '/escolas'
@@ -82,11 +152,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EscolasRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/redefinir-senha': {
+      id: '/redefinir-senha'
+      path: '/redefinir-senha'
+      fullPath: '/redefinir-senha'
+      preLoaderRoute: typeof RedefinirSenhaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/confirm': {
+      id: '/auth/confirm'
+      path: '/auth/confirm'
+      fullPath: '/auth/confirm'
+      preLoaderRoute: typeof AuthConfirmRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/escolas/': {
       id: '/escolas/'
       path: '/'
       fullPath: '/escolas/'
       preLoaderRoute: typeof EscolasIndexRouteImport
+      parentRoute: typeof EscolasRoute
+    }
+    '/escolas/$slug': {
+      id: '/escolas/$slug'
+      path: '/$slug'
+      fullPath: '/escolas/$slug'
+      preLoaderRoute: typeof EscolasSlugRouteImport
       parentRoute: typeof EscolasRoute
     }
     '/escolas/beija-flor/2026': {
@@ -100,11 +191,13 @@ declare module '@tanstack/react-router' {
 }
 
 interface EscolasRouteChildren {
+  EscolasSlugRoute: typeof EscolasSlugRoute
   EscolasIndexRoute: typeof EscolasIndexRoute
   EscolasBeijaFlor2026Route: typeof EscolasBeijaFlor2026Route
 }
 
 const EscolasRouteChildren: EscolasRouteChildren = {
+  EscolasSlugRoute: EscolasSlugRoute,
   EscolasIndexRoute: EscolasIndexRoute,
   EscolasBeijaFlor2026Route: EscolasBeijaFlor2026Route,
 }
@@ -114,7 +207,10 @@ const EscolasRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AvenidaRoute: AvenidaRoute,
   EscolasRoute: EscolasRouteWithChildren,
+  RedefinirSenhaRoute: RedefinirSenhaRoute,
+  AuthConfirmRoute: AuthConfirmRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

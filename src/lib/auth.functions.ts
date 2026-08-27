@@ -73,3 +73,49 @@ export const sairRitmista = createServerFn({ method: "POST" }).handler(
     return { ok: true as const };
   },
 );
+
+const entradaConfirmacaoRecuperacao = z.object({
+  token_hash: z.string().trim().min(1),
+  type: z.string().trim().default("recovery"),
+});
+
+export const confirmarRecuperacaoTokenHash = createServerFn({ method: "POST" })
+  .validator((data: unknown) => entradaConfirmacaoRecuperacao.parse(data))
+  .handler(async ({ data }) => {
+    const { confirmarRecuperacaoComTokenHash } = await import("@/lib/auth.server");
+    return confirmarRecuperacaoComTokenHash(data.token_hash, data.type);
+  });
+
+export const validarSessaoRecuperacaoAtiva = createServerFn({ method: "GET" }).handler(
+  async () => {
+    const { validarSessaoRecuperacao } = await import("@/lib/auth.server");
+    const valida = await validarSessaoRecuperacao();
+    return { valida };
+  },
+);
+
+export const redefinirSenhaRecuperacao = createServerFn({ method: "POST" })
+  .validator((data: unknown) => entradaTrocaSenha.parse(data))
+  .handler(async ({ data }) => {
+    const { redefinirSenhaRecuperacao: executarRedefinicao } = await import(
+      "@/lib/auth.server"
+    );
+    return executarRedefinicao(data.novaSenha);
+  });
+
+const entradaEstabelecerTokens = z.object({
+  accessToken: z.string().trim().min(1),
+  refreshToken: z.string().trim().min(1),
+});
+
+export const estabelecerSessaoRecuperacaoTokens = createServerFn({ method: "POST" })
+  .validator((data: unknown) => entradaEstabelecerTokens.parse(data))
+  .handler(async ({ data }) => {
+    const { estabelecerSessaoRecuperacaoPorTokens } = await import(
+      "@/lib/auth.server"
+    );
+    return estabelecerSessaoRecuperacaoPorTokens(
+      data.accessToken,
+      data.refreshToken,
+    );
+  });

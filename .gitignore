@@ -38,3 +38,6 @@ dist-ssr
 
 # Media source backups (kept locally / Supabase Storage, not in Git)
 *.mp4
+
+.vercel
+.env*

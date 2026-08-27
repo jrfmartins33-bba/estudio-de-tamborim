@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft, ListMusic, Music4, Play } from "lucide-react";
@@ -14,10 +14,8 @@ import { Button } from "@/components/ui/button";
 import { beijaFlor2026 } from "@/data/beija-flor-2026";
 import { obterVideoReferencia } from "@/lib/video-referencia.functions";
 import { listarTrechos, salvarTrecho } from "@/lib/trechos.functions";
-import {
-  obterSessaoRitmista,
-  trocarSenhaPrimeiroAcesso,
-} from "@/lib/auth.functions";
+import { obterSessaoRitmista } from "@/lib/auth.functions";
+import { PrimeiroAcesso } from "@/components/auth/PrimeiroAcesso";
 
 export const Route = createFileRoute("/escolas/beija-flor/2026")({
   head: () => ({
@@ -39,6 +37,13 @@ export const Route = createFileRoute("/escolas/beija-flor/2026")({
       },
     ],
   }),
+  beforeLoad: async () => {
+    const sessao = await obterSessaoRitmista();
+    if (!sessao?.usuario) {
+      throw redirect({ to: "/" });
+    }
+    return { usuario: sessao.usuario };
+  },
   component: PaginaEstudo,
 });
 
@@ -135,11 +140,12 @@ function PaginaEstudo() {
     <main className="min-h-screen bg-background">
       <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:py-12">
         <Link
-          to="/"
+          to="/escolas/$slug"
+          params={{ slug: "beija-flor" }}
           className="mb-6 inline-flex min-h-11 items-center gap-2 rounded-full px-3 text-sm font-bold text-primary transition-colors hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           <ArrowLeft className="size-4" aria-hidden="true" />
-          Voltar à Avenida
+          Voltar aos Carnavais
         </Link>
 
         <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 sm:flex sm:flex-wrap sm:justify-between">
@@ -256,95 +262,6 @@ function CarregandoEstudio() {
     <main className="min-h-screen bg-background">
       <div className="mx-auto flex min-h-screen w-full max-w-2xl items-center justify-center px-4 py-8">
         <p className="text-sm text-muted-foreground">Carregando seu acesso…</p>
-      </div>
-    </main>
-  );
-}
-
-function PrimeiroAcesso({ onConcluido }: { onConcluido: () => Promise<void> }) {
-  const trocarSenha = useServerFn(trocarSenhaPrimeiroAcesso);
-  const [novaSenha, setNovaSenha] = useState("");
-  const [confirmacao, setConfirmacao] = useState("");
-  const [erro, setErro] = useState<string | null>(null);
-  const [salvando, setSalvando] = useState(false);
-
-  const aoEnviar = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setErro(null);
-    if (novaSenha.length < 8 || novaSenha !== confirmacao) {
-      setErro("Confira os campos e tente novamente.");
-      return;
-    }
-
-    setSalvando(true);
-    try {
-      const resultado = await trocarSenha({ data: { novaSenha } });
-      if (!resultado.ok) {
-        setErro(resultado.erro);
-        return;
-      }
-      await onConcluido();
-    } catch {
-      setErro("Não foi possível atualizar a senha. Tente novamente.");
-    } finally {
-      setSalvando(false);
-    }
-  };
-
-  return (
-    <main className="min-h-screen bg-background">
-      <div className="mx-auto flex min-h-screen w-full max-w-2xl items-center px-4 py-8 sm:px-6">
-        <section className="w-full rounded-3xl border border-border bg-card p-6 shadow-sm sm:p-8">
-          <p className="text-xs font-bold tracking-[0.18em] text-primary uppercase">
-            Primeiro acesso
-          </p>
-          <h1 className="mt-3 text-3xl font-black tracking-tight">
-            Crie sua nova senha
-          </h1>
-          <p className="mt-3 text-sm leading-6 text-muted-foreground">
-            Por segurança, defina uma senha pessoal antes de continuar.
-          </p>
-          <form className="mt-6 space-y-4" onSubmit={aoEnviar}>
-            <label className="block">
-              <span className="text-sm font-bold">Nova senha</span>
-              <input
-                type="password"
-                name="novaSenha"
-                value={novaSenha}
-                onChange={(event) => setNovaSenha(event.target.value)}
-                autoComplete="new-password"
-                minLength={8}
-                required
-                className="mt-2 min-h-12 w-full rounded-xl border border-border bg-background px-4 text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-              />
-            </label>
-            <label className="block">
-              <span className="text-sm font-bold">Confirmar nova senha</span>
-              <input
-                type="password"
-                name="confirmarSenha"
-                value={confirmacao}
-                onChange={(event) => setConfirmacao(event.target.value)}
-                autoComplete="new-password"
-                minLength={8}
-                required
-                className="mt-2 min-h-12 w-full rounded-xl border border-border bg-background px-4 text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-              />
-            </label>
-            {erro ? (
-              <p className="text-sm font-medium text-destructive" role="alert">
-                {erro}
-              </p>
-            ) : null}
-            <button
-              type="submit"
-              disabled={salvando}
-              className="min-h-12 w-full rounded-xl bg-primary px-5 text-sm font-black text-primary-foreground transition-opacity disabled:opacity-60"
-            >
-              {salvando ? "Salvando…" : "Salvar nova senha e continuar"}
-            </button>
-          </form>
-        </section>
       </div>
     </main>
   );

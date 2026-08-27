@@ -10,7 +10,6 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
-  Flag,
   Heart,
   Sparkles,
   Users,
@@ -18,13 +17,19 @@ import {
 } from "lucide-react";
 import {
   escolasCatalogo,
-  type EscolaCatalogo,
+  obterStatusEscola,
+  type Escola,
 } from "@/data/escolas-catalogo";
 import {
   entrarUsuario,
+  estabelecerSessaoRecuperacaoTokens,
   obterSessaoRitmista,
   sairRitmista,
 } from "@/lib/auth.functions";
+import {
+  FiltroTecidoPortela,
+  PavilhaoProvisorio,
+} from "@/components/avenida/Pavilhoes";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -51,19 +56,102 @@ export const Route = createFileRoute("/")({
   component: PaginaInicial,
 });
 
-const coresProvisorias: Record<string, string> = {
-  azul: "#1d5f9f",
-  vermelho: "#c53636",
-  verde: "#238653",
-  amarelo: "#f0c945",
-  rosa: "#e8669a",
-  ouro: "#c9972f",
-  branco: "#f8f5eb",
-};
-
 function PaginaInicial() {
+  const navigate = useNavigate();
+  const obterSessao = useServerFn(obterSessaoRitmista);
+  const estabelecerRecuperacao = useServerFn(estabelecerSessaoRecuperacaoTokens);
+  const [processandoRecuperacao, setProcessandoRecuperacao] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const hash = window.location.hash;
+    console.info("[recovery] hash detectado:", Boolean(hash));
+    if (!hash || !hash.includes("type=recovery")) return;
+
+    const limpo = hash.startsWith("#") ? hash.slice(1) : hash;
+    const params = new URLSearchParams(limpo);
+    const tipo = params.get("type");
+    console.info("[recovery] type=recovery confirmado:", tipo === "recovery");
+    if (tipo !== "recovery") return;
+
+    const accessToken = params.get("access_token");
+    const refreshToken = params.get("refresh_token");
+
+    console.info("[recovery] access token presente:", Boolean(accessToken));
+    console.info("[recovery] refresh token presente:", Boolean(refreshToken));
+
+    if (!accessToken || !refreshToken) {
+      console.warn("[recovery] tokens ausentes no hash");
+      return;
+    }
+
+    // Remover imediatamente o hash da barra do navegador por segurança após extração
+    window.history.replaceState(
+      null,
+      "",
+      window.location.pathname + window.location.search,
+    );
+
+    setProcessandoRecuperacao(true);
+    console.info("[recovery] iniciando server function estabelecerRecuperacao");
+
+    void (async () => {
+      try {
+        const resultado = await estabelecerRecuperacao({
+          data: { accessToken, refreshToken },
+        });
+
+        console.info(
+          "[recovery] retorno server function:",
+          resultado.ok ? "sucesso" : "falha",
+        );
+
+        if (resultado.ok) {
+          console.info("[recovery] redirect redefinir-senha");
+          await navigate({ to: "/redefinir-senha" });
+        } else {
+          console.warn("[recovery] falha no retorno da server function");
+          await navigate({
+            to: "/redefinir-senha",
+            search: { erro: "invalido" },
+          });
+        }
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error("[recovery] erro inesperado ao chamar server function:", msg);
+        await navigate({
+          to: "/redefinir-senha",
+          search: { erro: "invalido" },
+        });
+      } finally {
+        setProcessandoRecuperacao(false);
+      }
+    })();
+  }, [estabelecerRecuperacao, navigate]);
+
+  const sessao = useQuery({
+    queryKey: ["sessao-ritmista"],
+    queryFn: () => obterSessao(),
+    staleTime: 60_000,
+  });
+  const autenticado = Boolean(sessao.data?.usuario);
+
   return (
     <main className="home-shell min-h-screen overflow-hidden bg-[#f8f1df] text-[#14233b]">
+      {processandoRecuperacao ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#050811]/80 backdrop-blur-sm text-white"
+        >
+          <div className="rounded-2xl border border-white/14 bg-[#081628] px-6 py-4 text-center shadow-2xl">
+            <p className="text-sm font-bold text-[#ffd37a]">
+              Preparando redefinição de senha…
+            </p>
+          </div>
+        </div>
+      ) : null}
       <HeroAvenida />
 
       <section
@@ -106,7 +194,12 @@ function PaginaInicial() {
           <div className="trilho-pavilhoes mt-3">
             <div className="pavilhoes-na-pista">
               {escolasCatalogo.map((escola, indice) => (
-                <CardPavilhao key={escola.id} escola={escola} indice={indice} />
+                <CardPavilhao
+                  key={escola.id}
+                  escola={escola}
+                  indice={indice}
+                  autenticado={autenticado}
+                />
               ))}
             </div>
           </div>
@@ -153,7 +246,7 @@ function PaginaInicial() {
                   memórias.
                 </p>
               </div>
-              <LoginAla />
+              <LoginAla sessao={sessao} />
             </div>
           </div>
 
@@ -419,16 +512,14 @@ function ControleBateriaHero() {
   );
 }
 
-function LoginAla() {
+function LoginAla({
+  sessao,
+}: {
+  sessao: ReturnType<typeof useQuery<{ usuario: any }>>;
+}) {
   const entrar = useServerFn(entrarUsuario);
   const navigate = useNavigate();
-  const obterSessao = useServerFn(obterSessaoRitmista);
   const sair = useServerFn(sairRitmista);
-  const sessao = useQuery({
-    queryKey: ["sessao-ritmista"],
-    queryFn: () => obterSessao(),
-    staleTime: 60_000,
-  });
   const [identificador, setIdentificador] = useState("");
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState<string | null>(null);
@@ -449,7 +540,7 @@ function LoginAla() {
       }
       setSenha("");
       await sessao.refetch();
-      await navigate({ to: "/escolas/beija-flor/2026" });
+      await navigate({ to: "/avenida" });
     } catch {
       setErro("Não foi possível entrar agora. Tente novamente.");
     } finally {
@@ -484,14 +575,22 @@ function LoginAla() {
               {usuario.papel === "admin" ? "Administrador" : usuario.email}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => void aoSair()}
-            disabled={enviando}
-            className="min-h-11 w-full rounded-xl border border-white/20 px-5 text-sm font-black text-white transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-white disabled:opacity-60"
-          >
-            {enviando ? "Saindo…" : "Sair"}
-          </button>
+          <div className="flex flex-col gap-2">
+            <Link
+              to="/avenida"
+              className="flex min-h-12 w-full items-center justify-center rounded-xl bg-[#ffd37a] px-5 text-sm font-black text-[#14233b] shadow-lg transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-white"
+            >
+              Ir para a Avenida
+            </Link>
+            <button
+              type="button"
+              onClick={() => void aoSair()}
+              disabled={enviando}
+              className="min-h-11 w-full rounded-xl border border-white/20 px-5 text-sm font-black text-white transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-white disabled:opacity-60"
+            >
+              {enviando ? "Saindo…" : "Sair"}
+            </button>
+          </div>
         </div>
       ) : (
         <>
@@ -544,11 +643,23 @@ function LoginAla() {
 function CardPavilhao({
   escola,
   indice,
+  autenticado,
 }: {
-  escola: EscolaCatalogo;
+  escola: Escola;
   indice: number;
+  autenticado: boolean;
 }) {
-  const disponivel = escola.status === "disponivel" && escola.rota;
+  const status = obterStatusEscola(escola);
+  const disponivel = status === "disponivel";
+
+  const textoSubtitulo = disponivel
+    ? autenticado
+      ? "Entrar na quadra"
+      : "Entre para estudar"
+    : status === "em_preparacao"
+      ? "Em preparação"
+      : "Em breve na avenida";
+
   const conteudo = (
     <>
       <span className="feixe-pavilhao" aria-hidden="true" />
@@ -565,33 +676,50 @@ function CardPavilhao({
             disponivel ? "text-[#ffd37a]" : "text-white/48"
           }`}
         >
-          {disponivel ? "Entrar na quadra" : "Em breve na avenida"}
+          {textoSubtitulo}
         </p>
       </div>
     </>
   );
 
-  const pavilhaoReal = escola.id === "portela";
+  const pavilhaoReal = Boolean(escola.pavilhaoAsset || escola.id === "portela");
   const classeBase =
     `pavilhao-node group relative flex min-h-60 flex-col px-2 py-3 text-left ${
       pavilhaoReal ? "pavilhao-node-portela" : ""
     }`;
-  const classeDisponivel = `${classeBase} transition-transform hover:-translate-y-1 focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[#ffd37a]`;
+  const classeDisponivel = `${classeBase} transition-transform hover:-translate-y-1 focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[#ffd37a] cursor-pointer`;
   const estiloNo = {
     "--atraso-pavilhao": `${-(indice % 7) * 0.65}s`,
     order: escola.id === "portela" ? -1 : indice,
   } as CSSProperties;
 
-  return disponivel ? (
-    <Link
-      to={escola.rota!}
-      className={classeDisponivel}
-      style={estiloNo}
-      aria-label={`Abrir ${escola.nome}`}
-    >
-      {conteudo}
-    </Link>
-  ) : (
+  if (disponivel) {
+    if (autenticado) {
+      return (
+        <Link
+          to="/avenida"
+          className={classeDisponivel}
+          style={estiloNo}
+          aria-label={`Abrir ${escola.nome}`}
+        >
+          {conteudo}
+        </Link>
+      );
+    }
+
+    return (
+      <a
+        href="#nossa-avenida"
+        className={classeDisponivel}
+        style={estiloNo}
+        aria-label={`${escola.nome} — Entre para estudar`}
+      >
+        {conteudo}
+      </a>
+    );
+  }
+
+  return (
     <article
       className={classeBase}
       style={estiloNo}
@@ -599,111 +727,6 @@ function CardPavilhao({
     >
       {conteudo}
     </article>
-  );
-}
-
-function PavilhaoProvisorio({
-  escola,
-  indice,
-}: {
-  escola: EscolaCatalogo;
-  indice: number;
-}) {
-  if (escola.id === "portela") {
-    return (
-      <div
-        className="pavilhao-real-portela"
-        style={{ animationDelay: `${-(indice % 6) * 0.7}s` }}
-        aria-hidden="true"
-      >
-        <img
-          src="/images/pavilhoes/portela-pavilhao.png"
-          alt=""
-          className="portela-tecido size-full object-contain"
-        />
-        <img
-          src="/images/pavilhoes/portela-pavilhao.png"
-          alt=""
-          className="portela-mastro size-full object-contain"
-        />
-      </div>
-    );
-  }
-
-  const cores = escola.cores.map(
-    (cor) => coresProvisorias[cor] ?? "#d7c8a8",
-  );
-  const passo = 100 / Math.max(cores.length, 1);
-  const gradiente = `linear-gradient(115deg, ${cores
-    .map(
-      (cor, index) =>
-        `${cor} ${index * passo}%, ${cor} ${(index + 1) * passo}%`,
-    )
-    .join(", ")})`;
-  const estilo = {
-    background: gradiente,
-    animationDelay: `${-(indice % 6) * 0.7}s`,
-  } satisfies CSSProperties;
-
-  return (
-    <div className="pavilhao-provisorio" aria-hidden="true">
-      <span className="pavilhao-haste" />
-      <span className="pavilhao-tecido" style={estilo}>
-        <Flag className="size-6 text-[#14233b]/56 sm:size-7" />
-      </span>
-    </div>
-  );
-}
-
-function FiltroTecidoPortela() {
-  return (
-    <svg
-      className="filtro-tecido-portela"
-      width="0"
-      height="0"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <defs>
-        <filter
-          id="ondulacao-portela"
-          x="-18%"
-          y="-18%"
-          width="136%"
-          height="136%"
-          colorInterpolationFilters="sRGB"
-        >
-          <feTurbulence
-            type="fractalNoise"
-            baseFrequency="0.008 0.028"
-            numOctaves="2"
-            seed="7"
-            result="ruido-tecido"
-          >
-            <animate
-              attributeName="baseFrequency"
-              dur="5.2s"
-              values="0.008 0.028; 0.013 0.038; 0.008 0.028"
-              repeatCount="indefinite"
-            />
-          </feTurbulence>
-          <feDisplacementMap
-            in="SourceGraphic"
-            in2="ruido-tecido"
-            scale="7"
-            xChannelSelector="R"
-            yChannelSelector="G"
-          >
-            <animate
-              attributeName="scale"
-              dur="4.4s"
-              values="4; 10; 6; 4"
-              repeatCount="indefinite"
-            />
-          </feDisplacementMap>
-        </filter>
-      </defs>
-    </svg>
   );
 }
 
