@@ -55,6 +55,44 @@ export const obterVideoReferencia = createServerFn({ method: "GET" }).validator(
   }
 });
 
+export const listarVideosReferencia = createServerFn({ method: "GET" })
+  .validator((data: unknown) => entradaExecucao.parse(data))
+  .handler(async ({ data }) => {
+    try {
+      const pasta = `execucoes/${data.execucaoId.replace(/[^a-zA-Z0-9-_]/g, "-")}`;
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: arquivos, error } = await supabaseAdmin.storage
+        .from(BUCKET)
+        .list(pasta, { limit: 100, sortBy: { column: "name", order: "asc" } });
+
+      if (error || !arquivos) {
+        console.error("[video-referencia] falha ao listar vídeos", error);
+        return { videos: [] as { caminho: string; nome: string; url: string }[], erroVideo: true as const };
+      }
+
+      const videos = await Promise.all(
+        arquivos
+          .filter((arquivo) => arquivo.name.toLowerCase().endsWith(".mp4"))
+          .map(async (arquivo) => {
+            const caminho = `${pasta}/${arquivo.name}`;
+            const { data: assinado, error: erroAssinatura } = await supabaseAdmin.storage
+              .from(BUCKET)
+              .createSignedUrl(caminho, 60 * 60 * 8);
+            if (erroAssinatura || !assinado?.signedUrl) return null;
+            return { caminho, nome: arquivo.name, url: assinado.signedUrl };
+          }),
+      );
+
+      return {
+        videos: videos.filter((video): video is NonNullable<typeof video> => video !== null),
+        erroVideo: false as const,
+      };
+    } catch (error) {
+      console.error("[video-referencia] falha inesperada ao listar vídeos", error);
+      return { videos: [] as { caminho: string; nome: string; url: string }[], erroVideo: true as const };
+    }
+  });
+
 async function assinarLeitura(client: SupabaseClient<Database>, storagePath: string) {
   const { data, error } = await client.storage.from(BUCKET).createSignedUrl(storagePath, 60 * 60 * 8);
   if (error) {

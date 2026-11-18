@@ -2,7 +2,7 @@ import type { Samba } from "./types";
 
 /**
  * Somente dados confirmados do material de referência.
- * videoUrl permanece null até o arquivo real do professor ser conectado.
+ * Os vídeos privados são listados e assinados pelo servidor em tempo de execução.
  */
 export const beijaFlor2026: Samba = {
   id: "beija-flor-2026-tamborim",

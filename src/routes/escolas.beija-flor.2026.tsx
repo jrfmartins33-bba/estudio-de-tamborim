@@ -12,7 +12,7 @@ import {
 } from "@/components/estudo/PlayerReferencia";
 import { Button } from "@/components/ui/button";
 import { beijaFlor2026 } from "@/data/beija-flor-2026";
-import { obterVideoReferencia } from "@/lib/video-referencia.functions";
+import { listarVideosReferencia } from "@/lib/video-referencia.functions";
 import { listarTrechos, salvarTrecho } from "@/lib/trechos.functions";
 import { obterSessaoRitmista } from "@/lib/auth.functions";
 import { PrimeiroAcesso } from "@/components/auth/PrimeiroAcesso";
@@ -62,21 +62,34 @@ function PaginaEstudo() {
   const [videoUrl, setVideoUrl] = useState<string | null>(
     samba.execucao.videoUrl,
   );
+  const [videos, setVideos] = useState<{ caminho: string; nome: string; url: string }[]>([]);
+  const [videoSelecionado, setVideoSelecionado] = useState("");
   const [videoErro, setVideoErro] = useState(false);
-  const buscarVideo = useServerFn(obterVideoReferencia);
+  const buscarVideos = useServerFn(listarVideosReferencia);
   useQuery({
-    queryKey: ["video-referencia", samba.execucao.id],
+    queryKey: ["videos-referencia", samba.execucao.id],
     queryFn: async () => {
-      const resultado = await buscarVideo({
+      const resultado = await buscarVideos({
         data: { execucaoId: samba.execucao.id },
       });
-      setVideoUrl(resultado.videoUrl);
+      setVideos(resultado.videos);
+      const inicial = resultado.videos.find((video) => video.caminho === videoSelecionado)
+        ?? resultado.videos.find((video) => video.nome.toLowerCase().includes("bossa"))
+        ?? resultado.videos[0];
+      setVideoSelecionado(inicial?.caminho ?? "");
+      setVideoUrl(inicial?.url ?? null);
       setVideoErro(resultado.erroVideo);
       return resultado;
     },
     staleTime: 5 * 60 * 1000,
     enabled: sessaoQuery.isSuccess && !deveTrocarSenha,
   });
+
+  const aoSelecionarVideo = (caminho: string) => {
+    const video = videos.find((item) => item.caminho === caminho);
+    setVideoSelecionado(caminho);
+    setVideoUrl(video?.url ?? null);
+  };
 
   const execucao = { ...samba.execucao, videoUrl };
   const buscarTrechos = useServerFn(listarTrechos);
@@ -166,7 +179,22 @@ function PaginaEstudo() {
 
         <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:gap-10">
           <section aria-label="Player de referência">
+            {videos.length > 1 ? (
+              <label className="mb-4 block max-w-xl space-y-2 text-sm font-semibold">
+                <span>Escolha o vídeo do desenho</span>
+                <select
+                  value={videoSelecionado}
+                  onChange={(evento) => aoSelecionarVideo(evento.currentTarget.value)}
+                  className="h-12 w-full rounded-xl border border-border bg-card px-3 text-base"
+                >
+                  {videos.map((video) => (
+                    <option key={video.caminho} value={video.caminho}>{video.nome}</option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
             <PlayerReferencia
+              key={videoSelecionado || "sem-video"}
               execucao={execucao}
               conector={conector}
               erroVideo={videoErro}
