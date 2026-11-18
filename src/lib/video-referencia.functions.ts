@@ -4,6 +4,10 @@ import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
 
 const BUCKET = "referencias";
+const VIDEOS_BEIJA_FLOR_2026 = [
+  "Desenho_Beija_Flor_2026.Com_Bossa.Diretor-Tamborim.mp4",
+  "referencia.mp4",
+] as const;
 const TAMANHO_MAXIMO_BYTES = 200 * 1024 * 1024;
 const entradaUpload = z.object({ execucaoId: z.string().min(1).max(120), tamanhoBytes: z.number().int().positive().max(TAMANHO_MAXIMO_BYTES), tipoArquivo: z.literal("video/mp4") });
 const entradaExecucao = z.object({ execucaoId: z.string().min(1).max(120) });
@@ -61,35 +65,30 @@ export const listarVideosReferencia = createServerFn({ method: "GET" })
     try {
       const pasta = `execucoes/${data.execucaoId.replace(/[^a-zA-Z0-9-_]/g, "-")}`;
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      const { data: arquivos, error } = await supabaseAdmin.storage
-        .from(BUCKET)
-        .list(pasta, { limit: 100, sortBy: { column: "name", order: "asc" } });
-
-      if (error || !arquivos) {
-        console.error("[video-referencia] falha ao listar vídeos", error);
-        return { videos: [] as { caminho: string; nome: string; url: string }[], erroVideo: true as const };
-      }
-
-      const videos = await Promise.all(
-        arquivos
-          .filter((arquivo) => arquivo.name.toLowerCase().endsWith(".mp4"))
-          .map(async (arquivo) => {
-            const caminho = `${pasta}/${arquivo.name}`;
-            const { data: assinado, error: erroAssinatura } = await supabaseAdmin.storage
-              .from(BUCKET)
-              .createSignedUrl(caminho, 60 * 60 * 8);
-            if (erroAssinatura || !assinado?.signedUrl) return null;
-            return { caminho, nome: arquivo.name, url: assinado.signedUrl };
-          }),
+      const resultados = await Promise.all(
+        VIDEOS_BEIJA_FLOR_2026.map(async (nome) => {
+          const caminho = `${pasta}/${nome}`;
+          const { data: assinado, error } = await supabaseAdmin.storage
+            .from(BUCKET)
+            .createSignedUrl(caminho, 60 * 60 * 8);
+          if (error || !assinado?.signedUrl) {
+            console.warn("[video-referencia] vídeo esperado não encontrado", { caminho, error });
+            return { video: null, nome };
+          }
+          return { video: { caminho, nome, url: assinado.signedUrl }, nome };
+        }),
       );
+      const videos = resultados.flatMap((resultado) => resultado.video ? [resultado.video] : []);
+      const faltando = resultados.filter((resultado) => !resultado.video).map((resultado) => resultado.nome);
 
       return {
-        videos: videos.filter((video): video is NonNullable<typeof video> => video !== null),
+        videos,
+        faltando,
         erroVideo: false as const,
       };
     } catch (error) {
       console.error("[video-referencia] falha inesperada ao listar vídeos", error);
-      return { videos: [] as { caminho: string; nome: string; url: string }[], erroVideo: true as const };
+      return { videos: [], faltando: [...VIDEOS_BEIJA_FLOR_2026], erroVideo: true as const };
     }
   });
 

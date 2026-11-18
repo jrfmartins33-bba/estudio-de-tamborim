@@ -63,6 +63,7 @@ function PaginaEstudo() {
     samba.execucao.videoUrl,
   );
   const [videos, setVideos] = useState<{ caminho: string; nome: string; url: string }[]>([]);
+  const [videosFaltando, setVideosFaltando] = useState<string[]>([]);
   const [videoSelecionado, setVideoSelecionado] = useState("");
   const [videoErro, setVideoErro] = useState(false);
   const buscarVideos = useServerFn(listarVideosReferencia);
@@ -73,6 +74,7 @@ function PaginaEstudo() {
         data: { execucaoId: samba.execucao.id },
       });
       setVideos(resultado.videos);
+      setVideosFaltando(resultado.faltando);
       const inicial = resultado.videos.find((video) => video.caminho === videoSelecionado)
         ?? resultado.videos.find((video) => video.nome.toLowerCase().includes("bossa"))
         ?? resultado.videos[0];
@@ -179,7 +181,7 @@ function PaginaEstudo() {
 
         <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:gap-10">
           <section aria-label="Player de referência">
-            {videos.length > 1 ? (
+            {videos.length > 0 ? (
               <label className="mb-4 block max-w-xl space-y-2 text-sm font-semibold">
                 <span>Escolha o vídeo do desenho</span>
                 <select
@@ -192,6 +194,11 @@ function PaginaEstudo() {
                   ))}
                 </select>
               </label>
+            ) : null}
+            {videosFaltando.length > 0 ? (
+              <p className="mb-4 rounded-xl bg-amber-100 px-4 py-3 text-sm text-amber-950" role="status">
+                Não encontrei este arquivo na pasta de referências do desenho: {videosFaltando.join(", ")}
+              </p>
             ) : null}
             <PlayerReferencia
               key={videoSelecionado || "sem-video"}
