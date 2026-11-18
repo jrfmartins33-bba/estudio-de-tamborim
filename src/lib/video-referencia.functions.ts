@@ -63,35 +63,33 @@ export const listarVideosReferencia = createServerFn({ method: "GET" })
   .validator((data: unknown) => entradaExecucao.parse(data))
   .handler(async ({ data }) => {
     try {
-      const pasta = `execucoes/${data.execucaoId.replace(/[^a-zA-Z0-9-_]/g, "-")}`;
+      const pastaEsperada = `execucoes/${data.execucaoId.replace(/[^a-zA-Z0-9-_]/g, "-")}`;
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      const resultados = await Promise.all(
-        VIDEOS_BEIJA_FLOR_2026.map(async (nome) => {
-          const caminho = `${pasta}/${nome}`;
-          const { data: assinado, error } = await supabaseAdmin.storage
-            .from(BUCKET)
-            .createSignedUrl(caminho, 60 * 60 * 8);
-          if (error || !assinado?.signedUrl) {
-            console.warn("[video-referencia] vídeo esperado não encontrado", { caminho, error });
-            return { video: null, nome };
+      const encontrados: { caminho: string; nome: string }[] = [];
+      const visitar = async (pasta: string): Promise<void> => {
+        const { data: itens, error } = await supabaseAdmin.storage.from(BUCKET).list(pasta, { limit: 1000 });
+        if (error || !itens) throw error ?? new Error("Falha ao listar arquivos.");
+        for (const item of itens) {
+          const caminho = pasta ? `${pasta}/${item.name}` : item.name;
+          if (item.name.toLowerCase().endsWith(".mp4")) {
+            if (caminho.startsWith(`${pastaEsperada}/`) || item.name.toLowerCase().includes("beija_flor_2026")) encontrados.push({ caminho, nome: item.name });
+          } else if (!item.id && (pasta === "" || caminho === "execucoes")) {
+            await visitar(caminho);
           }
-          return { video: { caminho, nome, url: assinado.signedUrl }, nome };
-        }),
-      );
-      const videos = resultados.flatMap((resultado) => resultado.video ? [resultado.video] : []);
-      const faltando = resultados.filter((resultado) => !resultado.video).map((resultado) => resultado.nome);
-
-      return {
-        videos,
-        faltando,
-        erroVideo: false as const,
+        }
       };
+      await visitar("");
+      const assinados = await Promise.all(encontrados.map(async ({ caminho, nome }) => {
+        const { data: arquivo, error } = await supabaseAdmin.storage.from(BUCKET).createSignedUrl(caminho, 60 * 60 * 8);
+        if (error || !arquivo?.signedUrl) return null;
+        return { caminho, nome, url: arquivo.signedUrl };
+      }));
+      return { videos: assinados.filter((video): video is NonNullable<typeof video> => video !== null), erroVideo: false as const };
     } catch (error) {
-      console.error("[video-referencia] falha inesperada ao listar vídeos", error);
-      return { videos: [], faltando: [...VIDEOS_BEIJA_FLOR_2026], erroVideo: true as const };
+      console.error("[video-referencia] falha ao localizar videos", error);
+      return { videos: [] as { caminho: string; nome: string; url: string }[], erroVideo: true as const };
     }
   });
-
 async function assinarLeitura(client: SupabaseClient<Database>, storagePath: string) {
   const { data, error } = await client.storage.from(BUCKET).createSignedUrl(storagePath, 60 * 60 * 8);
   if (error) {

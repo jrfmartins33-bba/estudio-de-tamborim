@@ -74,12 +74,6 @@ function PaginaEstudo() {
         data: { execucaoId: samba.execucao.id },
       });
       setVideos(resultado.videos);
-      setVideosFaltando(resultado.faltando);
-      const inicial = resultado.videos.find((video) => video.caminho === videoSelecionado)
-        ?? resultado.videos.find((video) => video.nome.toLowerCase().includes("bossa"))
-        ?? resultado.videos[0];
-      setVideoSelecionado(inicial?.caminho ?? "");
-      setVideoUrl(inicial?.url ?? null);
       setVideoErro(resultado.erroVideo);
       return resultado;
     },
@@ -87,13 +81,7 @@ function PaginaEstudo() {
     enabled: sessaoQuery.isSuccess && !deveTrocarSenha,
   });
 
-  const aoSelecionarVideo = (caminho: string) => {
-    const video = videos.find((item) => item.caminho === caminho);
-    setVideoSelecionado(caminho);
-    setVideoUrl(video?.url ?? null);
-  };
-
-  const execucao = { ...samba.execucao, videoUrl };
+  const execucao = samba.execucao;
   const buscarTrechos = useServerFn(listarTrechos);
   const criarTrecho = useServerFn(salvarTrecho);
   const [salvando, setSalvando] = useState(false);
@@ -143,14 +131,6 @@ function PaginaEstudo() {
     );
   }
 
-  const conector = podeEditar ? (
-      <ConectarVideoReal
-        execucaoId={samba.execucao.id}
-        onConectado={setVideoUrl}
-        compacto={Boolean(videoUrl)}
-      />
-    ) : null;
-
   return (
     <main className="min-h-screen bg-background">
       <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:py-12">
@@ -179,66 +159,43 @@ function PaginaEstudo() {
           </div>
         </header>
 
-        <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:gap-10">
-          <section aria-label="Player de referência">
-            {videos.length > 0 ? (
-              <label className="mb-4 block max-w-xl space-y-2 text-sm font-semibold">
-                <span>Escolha o vídeo do desenho</span>
-                <select
-                  value={videoSelecionado}
-                  onChange={(evento) => aoSelecionarVideo(evento.currentTarget.value)}
-                  className="h-12 w-full rounded-xl border border-border bg-card px-3 text-base"
-                >
-                  {videos.map((video) => (
-                    <option key={video.caminho} value={video.caminho}>{video.nome}</option>
-                  ))}
-                </select>
-              </label>
+        <section className="mt-8" aria-label="Vídeos do desenho">
+          <div className={`grid items-start gap-8 ${videos.length > 1 ? "lg:grid-cols-2" : "max-w-3xl"}`}>
+            {videos.map((video) => (
+              <article key={video.caminho} className="min-w-0">
+                <h2 className="mb-3 break-words text-lg font-bold">{video.nome}</h2>
+                <PlayerReferencia
+                  execucao={{ ...execucao, videoUrl: video.url }}
+                  {...(podeSalvarTrecho ? { aoSalvarTrecho, salvandoTrecho: salvando } : {})}
+                  pedidoDeEstudo={pedidoDeEstudo}
+                />
+              </article>
+            ))}
+            {videos.length === 0 ? (
+              <PlayerReferencia execucao={execucao} erroVideo={videoErro} />
             ) : null}
-            {videosFaltando.length > 0 ? (
-              <p className="mb-4 rounded-xl bg-amber-100 px-4 py-3 text-sm text-amber-950" role="status">
-                Não encontrei este arquivo na pasta de referências do desenho: {videosFaltando.join(", ")}
-              </p>
-            ) : null}
-            <PlayerReferencia
-              key={videoSelecionado || "sem-video"}
-              execucao={execucao}
-              conector={conector}
-              erroVideo={videoErro}
-              {...(podeSalvarTrecho
-                ? { aoSalvarTrecho, salvandoTrecho: salvando }
-                : {})}
-              pedidoDeEstudo={pedidoDeEstudo}
-            />
-            {erroTrecho ? (
-              <p className="mt-3 rounded-xl bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive" role="alert">
-                {erroTrecho}
-              </p>
-            ) : null}
-            {podeEditar && videoUrl ? <div className="mt-4 max-w-xs">{conector}</div> : null}
-          </section>
+          </div>
+          {podeEditar && videos.length > 0 ? (
+            <div className="mt-4 max-w-xs">
+              <ConectarVideoReal execucaoId={samba.execucao.id} onConectado={() => window.location.reload()} compacto />
+            </div>
+          ) : null}
+          {erroTrecho ? (
+            <p className="mt-3 rounded-xl bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive" role="alert">{erroTrecho}</p>
+          ) : null}
+        </section>
 
+        <div className="mt-10 grid items-start gap-6 lg:grid-cols-2">
           <aside className="space-y-6">
             <section className="rounded-2xl border border-border bg-card p-5">
               <h2 className="text-lg font-bold">Referência</h2>
               <dl className="mt-4 space-y-3 text-sm">
-                <Dado
-                  rotulo="Andamento da gravação"
-                  valor={
-                    execucao.bpmGravacao
-                      ? `~${execucao.bpmGravacao} BPM`
-                      : "A confirmar"
-                  }
-                />
+                <Dado rotulo="Andamento da gravação" valor={execucao.bpmGravacao ? `~${execucao.bpmGravacao} BPM` : "A confirmar"} />
                 <Dado rotulo="Andamento de bateria/desfile" valor="A confirmar" />
-                <Dado
-                  rotulo="Duração"
-                  valor={`~${formatarTempo(execucao.duracaoSegundos)}`}
-                />
+                <Dado rotulo="Duração" valor={`~${formatarTempo(execucao.duracaoSegundos)}`} />
                 <Dado rotulo="Execução" valor={execucao.executadoPor} />
               </dl>
             </section>
-
             <section className="rounded-2xl bg-secondary/70 p-5">
               <h2 className="text-base font-bold">Como estudar</h2>
               <ol className="mt-3 list-decimal space-y-1.5 pl-5 text-sm text-muted-foreground">
@@ -249,9 +206,7 @@ function PaginaEstudo() {
               </ol>
             </section>
           </aside>
-        </div>
-
-        <div className="mt-10 grid gap-6 lg:grid-cols-2">
+        <section className="min-w-0">
           <section className="rounded-2xl border border-dashed border-border p-6">
             <div className="flex items-center gap-2">
               <ListMusic className="size-5 text-primary" aria-hidden="true" />
@@ -284,6 +239,7 @@ function PaginaEstudo() {
               </div>
             )}
           </section>
+        </section>
         </div>
 
         <ConhecaEsteDesenho execucaoId={samba.execucao.id} podeEditar={podeEditar} />
