@@ -63,28 +63,26 @@ export const listarVideosReferencia = createServerFn({ method: "GET" })
   .validator((data: unknown) => entradaExecucao.parse(data))
   .handler(async ({ data }) => {
     try {
-      const pastaEsperada = `execucoes/${data.execucaoId.replace(/[^a-zA-Z0-9-_]/g, "-")}`;
+      const pasta = `execucoes/${data.execucaoId.replace(/[^a-zA-Z0-9-_]/g, "-")}`;
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      const encontrados: { caminho: string; nome: string }[] = [];
-      const visitar = async (pasta: string): Promise<void> => {
-        const { data: itens, error } = await supabaseAdmin.storage.from(BUCKET).list(pasta, { limit: 1000 });
-        if (error || !itens) throw error ?? new Error("Falha ao listar arquivos.");
-        for (const item of itens) {
-          const caminho = pasta ? `${pasta}/${item.name}` : item.name;
-          if (item.name.toLowerCase().endsWith(".mp4")) {
-            if (caminho.startsWith(`${pastaEsperada}/`) || item.name.toLowerCase().includes("beija_flor_2026")) encontrados.push({ caminho, nome: item.name });
-          } else if (!item.id && (pasta === "" || caminho === "execucoes")) {
-            await visitar(caminho);
-          }
-        }
-      };
-      await visitar("");
+      // Liste diretamente a pasta confirmada no Storage. Pastas do Storage
+      // podem ter id preenchido e não são identificadas com !item.id.
+      const { data: itens, error } = await supabaseAdmin.storage.from(BUCKET).list(pasta, { limit: 1000 });
+      if (error || !itens) throw error ?? new Error("Falha ao listar arquivos.");
+      const encontrados = itens
+        .filter((item) => item.name.toLowerCase().endsWith(".mp4"))
+        .map((item) => ({ caminho: `${pasta}/${item.name}`, nome: item.name }));
       const assinados = await Promise.all(encontrados.map(async ({ caminho, nome }) => {
         const { data: arquivo, error } = await supabaseAdmin.storage.from(BUCKET).createSignedUrl(caminho, 60 * 60 * 8);
-        if (error || !arquivo?.signedUrl) return null;
+        if (error || !arquivo?.signedUrl) {
+          console.error("[video-referencia] falha ao assinar vídeo", { caminho, error });
+          return null;
+        }
         return { caminho, nome, url: arquivo.signedUrl };
       }));
-      return { videos: assinados.filter((video): video is NonNullable<typeof video> => video !== null), erroVideo: false as const };
+      const videos = assinados.filter((video): video is NonNullable<typeof video> => video !== null);
+      if (videos.length === 0) console.error("[video-referencia] nenhum MP4 encontrado na pasta", pasta, itens.map((item) => item.name));
+      return { videos, erroVideo: videos.length === 0 };
     } catch (error) {
       console.error("[video-referencia] falha ao localizar videos", error);
       return { videos: [] as { caminho: string; nome: string; url: string }[], erroVideo: true as const };
