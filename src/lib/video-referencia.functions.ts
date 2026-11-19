@@ -65,14 +65,34 @@ export const listarVideosReferencia = createServerFn({ method: "GET" })
     try {
       const pasta = `execucoes/${data.execucaoId.replace(/[^a-zA-Z0-9-_]/g, "-")}`;
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      // Liste diretamente a pasta confirmada no Storage. Pastas do Storage
-      // podem ter id preenchido e não são identificadas com !item.id.
-      const { data: itens, error } = await supabaseAdmin.storage.from(BUCKET).list(pasta, { limit: 1000 });
-      if (error || !itens) throw error ?? new Error("Falha ao listar arquivos.");
-      const encontrados = itens
-        .filter((item) => item.name.toLowerCase().endsWith(".mp4"))
-        .map((item) => ({ caminho: `${pasta}/${item.name}`, nome: item.name }));
-      const assinados = await Promise.all(encontrados.map(async ({ caminho, nome }) => {
+      const encontrados = new Map<string, { caminho: string; nome: string }>();
+      const visitadas = new Set<string>();
+      const visitar = async (diretorio: string, profundidade = 0): Promise<void> => {
+        if (visitadas.has(diretorio) || profundidade > 5) return;
+        visitadas.add(diretorio);
+        const { data: itens, error } = await supabaseAdmin.storage.from(BUCKET).list(diretorio, { limit: 1000 });
+        if (error || !itens) throw error ?? new Error("Falha ao listar arquivos.");
+        for (const item of itens) {
+          const caminho = diretorio ? `${diretorio}/${item.name}` : item.name;
+          if (item.name.toLowerCase().endsWith(".mp4")) {
+            if (caminho.startsWith("execucoes/") || item.name.toLowerCase().includes("beija_flor_2026")) {
+              encontrados.set(caminho, { caminho, nome: item.name });
+            }
+          } else if (
+            (diretorio === "" && item.name === "execucoes") ||
+            diretorio === "execucoes" ||
+            diretorio.startsWith("execucoes/")
+          ) {
+            // No Storage, uma pasta pode vir com id preenchido. Percorremos
+            // as subpastas pelo prefixo, sem depender desse campo.
+            await visitar(caminho, profundidade + 1);
+          }
+        }
+      };
+      await visitar("");
+      console.info("[video-referencia] MP4s localizados", [...encontrados.keys()]);
+      const lista = [...encontrados.values()];
+      const assinados = await Promise.all(lista.map(async ({ caminho, nome }) => {
         const { data: arquivo, error } = await supabaseAdmin.storage.from(BUCKET).createSignedUrl(caminho, 60 * 60 * 8);
         if (error || !arquivo?.signedUrl) {
           console.error("[video-referencia] falha ao assinar vídeo", { caminho, error });
@@ -81,7 +101,7 @@ export const listarVideosReferencia = createServerFn({ method: "GET" })
         return { caminho, nome, url: arquivo.signedUrl };
       }));
       const videos = assinados.filter((video): video is NonNullable<typeof video> => video !== null);
-      if (videos.length === 0) console.error("[video-referencia] nenhum MP4 encontrado na pasta", pasta, itens.map((item) => item.name));
+      if (videos.length === 0) console.error("[video-referencia] nenhum MP4 encontrado na execução", pasta);
       return { videos, erroVideo: videos.length === 0 };
     } catch (error) {
       console.error("[video-referencia] falha ao localizar videos", error);
