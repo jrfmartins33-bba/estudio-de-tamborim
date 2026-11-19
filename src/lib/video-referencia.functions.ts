@@ -59,6 +59,40 @@ export const obterVideoReferencia = createServerFn({ method: "GET" }).validator(
   }
 });
 
+export const sincronizarDesenhoBeijaFlor = createServerFn({ method: "POST" })
+  .validator((data: unknown) => entradaExecucao.parse(data))
+  .handler(async ({ data }) => {
+    const { exigirAdmin } = await import("@/lib/auth.server");
+    try { await exigirAdmin(); } catch { return { ok: false as const, erro: "Somente o administrador pode sincronizar o vídeo." }; }
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const pasta = `execucoes/${data.execucaoId.replace(/[^a-zA-Z0-9-_]/g, "-")}`;
+    const nome = VIDEOS_BEIJA_FLOR_2026[0];
+    const destino = `${pasta}/${nome}`;
+    const { data: itens, error: erroLista } = await supabaseAdmin.storage.from(BUCKET).list(pasta, { limit: 1000 });
+    if (erroLista || !itens) {
+      console.error("[video-referencia] falha ao verificar destino de sincronização", erroLista);
+      return { ok: false as const, erro: "Não foi possível conferir o destino no Storage." };
+    }
+    if (itens.some((item) => item.name === nome)) return { ok: true as const, jaExistia: true };
+    try {
+      const arquivoUrl = `https://estudio-de-tamborim.vercel.app/videos/${encodeURIComponent(nome)}`;
+      const resposta = await fetch(arquivoUrl);
+      if (!resposta.ok) throw new Error(`Falha ao obter o arquivo do deploy: HTTP ${resposta.status}`);
+      const bytes = new Uint8Array(await resposta.arrayBuffer());
+      const { error } = await supabaseAdmin.storage.from(BUCKET).upload(destino, bytes, {
+        contentType: "video/mp4",
+        cacheControl: "3600",
+        upsert: false,
+      });
+      if (error) throw error;
+      console.info("[video-referencia] desenho sincronizado com o Supabase", destino, bytes.byteLength);
+      return { ok: true as const, jaExistia: false };
+    } catch (error) {
+      console.error("[video-referencia] falha ao sincronizar desenho com o Supabase", error);
+      return { ok: false as const, erro: "O player está disponível; a sincronização com o Storage falhou." };
+    }
+  });
+
 export const listarVideosReferencia = createServerFn({ method: "GET" })
   .validator((data: unknown) => entradaExecucao.parse(data))
   .handler(async ({ data }) => {

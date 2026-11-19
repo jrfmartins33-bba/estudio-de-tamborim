@@ -12,7 +12,10 @@ import {
 } from "@/components/estudo/PlayerReferencia";
 import { Button } from "@/components/ui/button";
 import { beijaFlor2026 } from "@/data/beija-flor-2026";
-import { listarVideosReferencia } from "@/lib/video-referencia.functions";
+import {
+  listarVideosReferencia,
+  sincronizarDesenhoBeijaFlor,
+} from "@/lib/video-referencia.functions";
 import { listarTrechos, salvarTrecho } from "@/lib/trechos.functions";
 import { obterSessaoRitmista } from "@/lib/auth.functions";
 import { PrimeiroAcesso } from "@/components/auth/PrimeiroAcesso";
@@ -79,6 +82,14 @@ function PaginaEstudo() {
     },
     staleTime: 5 * 60 * 1000,
     enabled: sessaoQuery.isSuccess && !deveTrocarSenha,
+  });
+  const sincronizarVideo = useServerFn(sincronizarDesenhoBeijaFlor);
+  useQuery({
+    queryKey: ["sincronizar-video-beija-flor", samba.execucao.id],
+    queryFn: () => sincronizarVideo({ data: { execucaoId: samba.execucao.id } }),
+    enabled: podeEditar && videos.length > 0,
+    retry: false,
+    staleTime: Infinity,
   });
 
   const execucao = samba.execucao;
