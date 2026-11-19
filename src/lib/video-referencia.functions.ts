@@ -90,6 +90,27 @@ export const listarVideosReferencia = createServerFn({ method: "GET" })
         }
       };
       await visitar("");
+      const nomeDesenho = VIDEOS_BEIJA_FLOR_2026[0];
+      const caminhoDesenho = `${pasta}/${nomeDesenho}`;
+      if (!encontrados.has(caminhoDesenho)) {
+        try {
+          const host = process.env["VERCEL_URL"] ?? "estudio-de-tamborim.vercel.app";
+          const origem = `https://${host}/videos/${encodeURIComponent(nomeDesenho)}`;
+          const resposta = await fetch(origem);
+          if (!resposta.ok) throw new Error(`Falha ao obter o arquivo do deploy: HTTP ${resposta.status}`);
+          const bytes = new Uint8Array(await resposta.arrayBuffer());
+          const { error } = await supabaseAdmin.storage.from(BUCKET).upload(caminhoDesenho, bytes, {
+            contentType: "video/mp4",
+            cacheControl: "3600",
+            upsert: false,
+          });
+          if (error) throw error;
+          encontrados.set(caminhoDesenho, { caminho: caminhoDesenho, nome: nomeDesenho });
+          console.info("[video-referencia] desenho sincronizado com o Supabase", caminhoDesenho);
+        } catch (error) {
+          console.error("[video-referencia] não foi possível sincronizar o desenho com o Supabase", error);
+        }
+      }
       console.info("[video-referencia] MP4s localizados", [...encontrados.keys()]);
       const lista = [...encontrados.values()];
       const assinados = await Promise.all(lista.map(async ({ caminho, nome }) => {
@@ -101,6 +122,13 @@ export const listarVideosReferencia = createServerFn({ method: "GET" })
         return { caminho, nome, url: arquivo.signedUrl };
       }));
       const videos = assinados.filter((video): video is NonNullable<typeof video> => video !== null);
+      if (!videos.some((video) => video.nome === nomeDesenho)) {
+        videos.push({
+          caminho: `videos/${nomeDesenho}`,
+          nome: nomeDesenho,
+          url: `/videos/${encodeURIComponent(nomeDesenho)}`,
+        });
+      }
       if (videos.length === 0) console.error("[video-referencia] nenhum MP4 encontrado na execução", pasta);
       return { videos, erroVideo: videos.length === 0 };
     } catch (error) {
